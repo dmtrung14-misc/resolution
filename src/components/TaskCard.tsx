@@ -1,5 +1,5 @@
 import { Task, Assignee, UserRole } from '../types';
-import { Calendar, AlertCircle, Trash2, Edit, MessageCircle, CheckCircle2, CheckSquare } from 'lucide-react';
+import { Calendar, AlertCircle, Trash2, Edit, MessageCircle, CheckCircle2, CheckSquare, Link } from 'lucide-react';
 import { format } from 'date-fns';
 import ProgressRing from './ProgressRing';
 import SeasonalEmoji from './SeasonalEmoji';
@@ -14,13 +14,22 @@ interface TaskCardProps {
   onDelete: () => void;
   onEdit: () => void;
   onViewDetails: () => void;
+  onCopyLink: () => void;
 }
 
-export default function TaskCard({ task, userName, partnerName, currentUser, onUpdate, onDelete, onEdit, onViewDetails }: TaskCardProps) {
+export default function TaskCard({ task, userName, partnerName, currentUser, onUpdate, onDelete, onEdit, onViewDetails, onCopyLink }: TaskCardProps) {
   const getAssigneeName = (assignee: Assignee) => {
     if (assignee === 'me') return userName;
     if (assignee === 'her') return partnerName;
     return 'Together';
+  };
+
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}${window.location.pathname}?taskId=${task.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      onCopyLink();
+    });
   };
 
   const getAssigneeColor = (assignee: Assignee) => {
@@ -182,6 +191,15 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
                 )}
               </button>
             )}
+            <button
+              onClick={handleCopyLink}
+              className="p-1.5 text-gray-500 hover:bg-gray-50 rounded transition-colors"
+              onMouseEnter={(e) => e.currentTarget.style.color = '#10b981'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
+              title="Copy link to share"
+            >
+              <Link size={16} />
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();

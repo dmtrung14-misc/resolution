@@ -1,5 +1,5 @@
 import { Task, Assignee, UserRole } from '../types';
-import { Calendar, AlertCircle, Trash2, Edit, MessageCircle, CheckCircle2, CheckSquare } from 'lucide-react';
+import { Calendar, AlertCircle, Trash2, Edit, MessageCircle, CheckCircle2, CheckSquare, Link } from 'lucide-react';
 import { format } from 'date-fns';
 import SeasonalEmoji from './SeasonalEmoji';
 import { celebrateTaskCompletion } from '../utils/customCelebrations';
@@ -13,13 +13,22 @@ interface TaskListItemProps {
   onDelete: () => void;
   onEdit: () => void;
   onViewDetails: () => void;
+  onCopyLink: () => void;
 }
 
-export default function TaskListItem({ task, userName, partnerName, currentUser, onUpdate, onDelete, onEdit, onViewDetails }: TaskListItemProps) {
+export default function TaskListItem({ task, userName, partnerName, currentUser, onUpdate, onDelete, onEdit, onViewDetails, onCopyLink }: TaskListItemProps) {
   const getAssigneeName = (assignee: Assignee) => {
     if (assignee === 'me') return userName;
     if (assignee === 'her') return partnerName;
     return 'Together';
+  };
+
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}${window.location.pathname}?taskId=${task.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      onCopyLink();
+    });
   };
 
   const getAssigneeColor = (assignee: Assignee) => {
@@ -156,6 +165,15 @@ export default function TaskListItem({ task, userName, partnerName, currentUser,
 
         {/* Actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={handleCopyLink}
+            className="p-1.5 text-gray-500 hover:bg-gray-50 rounded transition-colors"
+            onMouseEnter={(e) => e.currentTarget.style.color = '#10b981'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
+            title="Copy link to share"
+          >
+            <Link size={14} />
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();

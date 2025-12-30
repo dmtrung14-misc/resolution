@@ -31,6 +31,7 @@ function App() {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showCopyNotification, setShowCopyNotification] = useState(false);
 
   // Initialize authentication on mount
   useEffect(() => {
@@ -56,6 +57,23 @@ function App() {
     
     initAuth();
   }, []);
+
+  // Handle task links from URL
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && state.tasks.length > 0) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const taskId = urlParams.get('taskId');
+      
+      if (taskId) {
+        const task = state.tasks.find(t => t.id === taskId);
+        if (task) {
+          setSelectedTask(task);
+          // Clear URL parameters after opening
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      }
+    }
+  }, [isLoading, isAuthenticated, state.tasks]);
 
   // Load app data (tasks and display names)
   const loadAppData = async () => {
@@ -130,6 +148,13 @@ function App() {
       userName: '',
       partnerName: '',
     });
+  };
+
+  const handleShowCopyNotification = () => {
+    setShowCopyNotification(true);
+    setTimeout(() => {
+      setShowCopyNotification(false);
+    }, 3000);
   };
 
   const addTask = (task: Omit<Task, 'id' | 'createdAt'>) => {
@@ -437,6 +462,7 @@ function App() {
                 onDelete={() => deleteTask(task.id)}
                 onEdit={() => handleEditTask(task)}
                 onViewDetails={() => setSelectedTask(task)}
+                onCopyLink={handleShowCopyNotification}
               />
             ))}
           </div>
@@ -453,6 +479,7 @@ function App() {
                 onDelete={() => deleteTask(task.id)}
                 onEdit={() => handleEditTask(task)}
                 onViewDetails={() => setSelectedTask(task)}
+                onCopyLink={handleShowCopyNotification}
               />
             ))}
           </div>
@@ -507,6 +534,26 @@ function App() {
           }}
           onClose={() => setSelectedTask(null)}
         />
+      )}
+
+      {/* Copy Link Notification */}
+      {showCopyNotification && (
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 animate-[slideUp_0.3s_ease-out]">
+          <div 
+            className="bg-white rounded-xl px-6 py-4 shadow-2xl border-2 flex items-center gap-3"
+            style={{ borderColor: '#10b981' }}
+          >
+            <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)' }}>
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">Link copied!</p>
+              <p className="text-sm text-gray-600">Share it with your partner 💕</p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
