@@ -4,12 +4,13 @@ import { firebaseService } from './services/firebaseService';
 import { authService } from './services/authService';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
+import TaskListItem from './components/TaskListItem';
 import TaskModal from './components/TaskModal';
 import TaskDetailModal from './components/TaskDetailModal';
 import LoginModal from './components/LoginModal';
 import SettingsModal from './components/SettingsModal';
 import FeatureGuide from './components/FeatureGuide';
-import { Plus, Info, Loader2 } from 'lucide-react';
+import { Plus, Info, Loader2, LayoutGrid, List } from 'lucide-react';
 
 function App() {
   const [state, setState] = useState<AppState>({
@@ -26,6 +27,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showFeatureGuide, setShowFeatureGuide] = useState(false);
   const [filter, setFilter] = useState<'my' | 'partner' | 'together' | null>(null);
+  const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -235,9 +237,10 @@ function App() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filter Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide">
-          {(['my', 'partner', 'together'] as const).map((f) => {
+        {/* Filter Tabs and Display Mode Toggle */}
+        <div className="flex items-center justify-between mb-6 gap-4">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            {(['my', 'partner', 'together'] as const).map((f) => {
             const getEmoji = () => {
               if (f === 'my') return currentUser === 'doggo' ? '🐕' : '🦆';
               if (f === 'partner') return currentUser === 'doggo' ? '🦆' : '🐕';
@@ -266,9 +269,38 @@ function App() {
               </button>
             );
           })}
+          </div>
+
+          {/* Display Mode Toggle */}
+          <div className="flex gap-1 bg-white rounded-lg border border-gray-200 p-1">
+            <button
+              onClick={() => setDisplayMode('grid')}
+              className={`p-2 rounded transition-all ${
+                displayMode === 'grid'
+                  ? 'text-white shadow-sm'
+                  : 'text-gray-500 hover:bg-gray-50'
+              }`}
+              style={displayMode === 'grid' ? { background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)' } : {}}
+              title="Grid view"
+            >
+              <LayoutGrid size={18} />
+            </button>
+            <button
+              onClick={() => setDisplayMode('list')}
+              className={`p-2 rounded transition-all ${
+                displayMode === 'list'
+                  ? 'text-white shadow-sm'
+                  : 'text-gray-500 hover:bg-gray-50'
+              }`}
+              style={displayMode === 'list' ? { background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)' } : {}}
+              title="List view"
+            >
+              <List size={18} />
+            </button>
+          </div>
         </div>
 
-        {/* Tasks Grid */}
+        {/* Tasks Display */}
         {filter === null ? (
           <div className="text-center py-16">
             <div className="mb-6">
@@ -294,10 +326,26 @@ function App() {
             <p className="text-gray-500 text-lg mb-4">No resolutions in this category yet!</p>
             <p className="text-gray-400 mb-8">Start by adding your first goal</p>
           </div>
-        ) : (
+        ) : displayMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTasks.map(task => (
               <TaskCard
+                key={task.id}
+                task={task}
+                userName={state.userName}
+                partnerName={state.partnerName}
+                currentUser={currentUser!}
+                onUpdate={(updates) => updateTask(task.id, updates)}
+                onDelete={() => deleteTask(task.id)}
+                onEdit={() => handleEditTask(task)}
+                onViewDetails={() => setSelectedTask(task)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredTasks.map(task => (
+              <TaskListItem
                 key={task.id}
                 task={task}
                 userName={state.userName}
