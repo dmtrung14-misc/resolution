@@ -274,10 +274,10 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header 
-        userName={state.userName}
-        partnerName={state.partnerName}
         completedCount={completedCount}
         totalCount={totalCount}
+        currentUser={currentUser}
+        filter={filter}
         onOpenSettings={() => setShowSettings(true)}
         isSaving={isSaving}
       />
