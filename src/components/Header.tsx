@@ -30,10 +30,10 @@ export default function Header({ completedCount, totalCount, currentUser, filter
           <div>
             <div className="flex items-center gap-3">
               <span className="text-3xl">🦆</span>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Our 2026 together
-              </h1>
               <span className="text-3xl">🐕</span>
+              <h1 className="text-2xl font-bold text-gray-900">
+                This year we will...
+              </h1>
             </div>
             {getGreeting() && (
               <p className="text-gray-600 text-sm mt-1">

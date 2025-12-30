@@ -1,5 +1,5 @@
 import { Task, Assignee, UserRole } from '../types';
-import { Calendar, AlertCircle, Trash2, Edit, MessageCircle, CheckCircle2 } from 'lucide-react';
+import { Calendar, AlertCircle, Trash2, Edit, MessageCircle, CheckCircle2, CheckSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import SeasonalEmoji from './SeasonalEmoji';
 import { celebrateTaskCompletion } from '../utils/customCelebrations';
@@ -130,6 +130,20 @@ export default function TaskListItem({ task, userName, partnerName, currentUser,
           </div>
         ) : (
           <div className="w-28"></div>
+        )}
+
+        {/* Subtasks Count */}
+        {task.subtasks && task.subtasks.length > 0 && (
+          <div className="flex items-center gap-1 text-xs flex-shrink-0">
+            <CheckSquare size={12} className={
+              task.subtasks.every(st => st.completed) ? 'text-green-500' : 'text-gray-500'
+            } />
+            <span className={
+              task.subtasks.every(st => st.completed) ? 'text-green-600 font-medium' : 'text-gray-500'
+            }>
+              {task.subtasks.filter(st => st.completed).length}/{task.subtasks.length}
+            </span>
+          </div>
         )}
 
         {/* Comments Count */}

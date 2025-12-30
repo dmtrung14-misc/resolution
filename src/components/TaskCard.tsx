@@ -1,5 +1,5 @@
 import { Task, Assignee, UserRole } from '../types';
-import { Calendar, AlertCircle, Trash2, Edit, MessageCircle, CheckCircle2 } from 'lucide-react';
+import { Calendar, AlertCircle, Trash2, Edit, MessageCircle, CheckCircle2, CheckSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import ProgressRing from './ProgressRing';
 import SeasonalEmoji from './SeasonalEmoji';
@@ -69,6 +69,17 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
             <h3 className={`font-semibold text-lg mb-2 ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
               {task.title}
             </h3>
+            {/* Deadline */}
+            <div className={`flex items-center gap-1.5 text-xs mb-2 ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+              <Calendar size={12} />
+              <span>{task.deadline instanceof Date && !isNaN(task.deadline.getTime()) 
+                ? format(task.deadline, 'MMM d, yyyy') 
+                : 'Invalid date'}</span>
+              {task.deadline instanceof Date && !isNaN(task.deadline.getTime()) && (
+                <SeasonalEmoji date={task.deadline} size="small" />
+              )}
+            </div>
+            {/* Assignee Badge */}
             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getAssigneeColor(task.assignee)}`}>
               <span>{getAssigneeEmoji(task.assignee)}</span>
               <span>{getAssigneeName(task.assignee)}</span>
@@ -128,20 +139,24 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-          <div className="flex items-center gap-4 text-sm">
-            <div className={`flex items-center gap-1.5 ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
-              <Calendar size={14} />
-              <span>{task.deadline instanceof Date && !isNaN(task.deadline.getTime()) 
-                ? format(task.deadline, 'MMM d, yyyy') 
-                : 'Invalid date'}</span>
-              {task.deadline instanceof Date && !isNaN(task.deadline.getTime()) && (
-                <SeasonalEmoji date={task.deadline} size="small" />
-              )}
-            </div>
+          <div className="flex items-center gap-3 text-sm">
             <div className={`flex items-center gap-1 ${getUrgencyColor(task.urgency)}`}>
               <AlertCircle size={14} />
               <span className="capitalize">{task.urgency}</span>
             </div>
+
+            {task.subtasks && task.subtasks.length > 0 && (
+              <div className="flex items-center gap-1 text-xs text-gray-600">
+                <CheckSquare size={14} className={
+                  task.subtasks.every(st => st.completed) ? 'text-green-500' : 'text-gray-500'
+                } />
+                <span className={
+                  task.subtasks.every(st => st.completed) ? 'text-green-600 font-medium' : ''
+                }>
+                  {task.subtasks.filter(st => st.completed).length}/{task.subtasks.length}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

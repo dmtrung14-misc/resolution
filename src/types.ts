@@ -20,6 +20,13 @@ export interface Comment {
   reactions?: Reaction[]; // Reactions to the comment
 }
 
+export interface SubTask {
+  id: string;
+  title: string;
+  completed: boolean;
+  createdAt: Date;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -39,6 +46,9 @@ export interface Task {
   
   // Comments and photos
   comments: Comment[];
+  
+  // Subtasks
+  subtasks?: SubTask[];
 }
 
 export interface UserProfile {

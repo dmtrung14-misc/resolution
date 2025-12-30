@@ -23,8 +23,8 @@ export default function FeatureGuide({ onClose }: FeatureGuideProps) {
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
           <div className="flex items-center gap-3">
-            <Heart style={{ color: '#3b82f6' }} size={28} />
-            <h2 className="text-2xl font-bold text-gray-900">How to Use Our App</h2>
+            <Heart style={{ color: '#ef4444' }} size={28} fill="#ef4444" />
+            <h2 className="text-2xl font-bold text-gray-900">made with too much love for you</h2>
           </div>
           <button
             onClick={onClose}
@@ -39,7 +39,7 @@ export default function FeatureGuide({ onClose }: FeatureGuideProps) {
         <div className="p-6 space-y-6">
           <div className="text-center mb-6">
             <p className="text-gray-600">
-              Your personal resolution tracker built for couples! Here's everything you can do together 🐕🦆
+              Here's everything we can do together
             </p>
           </div>
 

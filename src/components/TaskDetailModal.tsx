@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Task, Comment, UserRole, Reaction } from '../types';
+import { Task, Comment, UserRole, Reaction, SubTask } from '../types';
 import { X, Send, Camera, Plus, Minus, CheckCircle2, Loader2, Calendar, AlertCircle, Smile, Film, Reply, Heart, ThumbsUp, Laugh } from 'lucide-react';
 import { format } from 'date-fns';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
@@ -27,6 +27,7 @@ export default function TaskDetailModal({ task, userName, partnerName, currentUs
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Automatically use current user as comment author
@@ -217,6 +218,34 @@ export default function TaskDetailModal({ task, userName, partnerName, currentUs
     }
   };
 
+  // Subtask handlers
+  const handleAddSubtask = () => {
+    if (!newSubtaskTitle.trim()) return;
+
+    const newSubtask: SubTask = {
+      id: Date.now().toString(),
+      title: newSubtaskTitle.trim(),
+      completed: false,
+      createdAt: new Date(),
+    };
+
+    const updatedSubtasks = [...(task.subtasks || []), newSubtask];
+    onUpdate({ subtasks: updatedSubtasks });
+    setNewSubtaskTitle('');
+  };
+
+  const handleToggleSubtask = (subtaskId: string) => {
+    const updatedSubtasks = (task.subtasks || []).map(st =>
+      st.id === subtaskId ? { ...st, completed: !st.completed } : st
+    );
+    onUpdate({ subtasks: updatedSubtasks });
+  };
+
+  const handleRemoveSubtask = (subtaskId: string) => {
+    const updatedSubtasks = (task.subtasks || []).filter(st => st.id !== subtaskId);
+    onUpdate({ subtasks: updatedSubtasks });
+  };
+
   const handleUpdateCount = (delta: number) => {
     if (task.type === 'countable' && task.targetCount) {
       const newCount = Math.max(0, Math.min((task.currentCount || 0) + delta, task.targetCount));
@@ -386,6 +415,74 @@ export default function TaskDetailModal({ task, userName, partnerName, currentUs
               </div>
             </div>
           )}
+
+          {/* Subtasks Section */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-3">Subtasks</h3>
+            
+            {/* Subtask List */}
+            {task.subtasks && task.subtasks.length > 0 && (
+              <div className="space-y-2 mb-4">
+                {task.subtasks.map((subtask) => (
+                  <div
+                    key={subtask.id}
+                    className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg group transition-colors"
+                  >
+                    <button
+                      onClick={() => handleToggleSubtask(subtask.id)}
+                      className="flex-shrink-0"
+                    >
+                      {subtask.completed ? (
+                        <CheckCircle2 size={20} className="text-green-500" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-gray-300 hover:border-blue-400 transition-colors" />
+                      )}
+                    </button>
+                    <span
+                      className={`flex-1 text-sm ${
+                        subtask.completed
+                          ? 'text-gray-500 line-through'
+                          : 'text-gray-900'
+                      }`}
+                    >
+                      {subtask.title}
+                    </span>
+                    <button
+                      onClick={() => handleRemoveSubtask(subtask.id)}
+                      className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add Subtask Input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddSubtask();
+                  }
+                }}
+                placeholder="Add a subtask..."
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={handleAddSubtask}
+                disabled={!newSubtaskTitle.trim()}
+                style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)' }}
+                className="px-4 py-2 text-white rounded-lg hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+              >
+                <Plus size={16} />
+                Add
+              </button>
+            </div>
+          </div>
 
           {/* Comments Section */}
           <div>
