@@ -1,6 +1,7 @@
 import { Task, Assignee, UserRole } from '../types';
 import { Calendar, AlertCircle, Trash2, Edit, MessageCircle, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
+import SeasonalEmoji from './SeasonalEmoji';
 import { celebrateTaskCompletion } from '../utils/customCelebrations';
 
 interface TaskListItemProps {
@@ -39,7 +40,8 @@ export default function TaskListItem({ task, userName, partnerName, currentUser,
     return 'text-gray-600';
   };
 
-  const isOverdue = !task.completed && new Date(task.deadline) < new Date();
+  const deadline = task.deadline instanceof Date ? task.deadline : new Date(task.deadline);
+  const isOverdue = !task.completed && deadline instanceof Date && !isNaN(deadline.getTime()) && deadline < new Date();
 
   const handleToggleComplete = () => {
     if (!task.completed) {
@@ -54,14 +56,18 @@ export default function TaskListItem({ task, userName, partnerName, currentUser,
 
   return (
     <div 
-      className={`bg-white rounded-lg border transition-all hover:border-primary-300 ${
+      className={`bg-white rounded-lg border transition-all hover:border-primary-300 cursor-pointer ${
         task.completed ? 'border-green-300 opacity-90' : isOverdue ? 'border-red-300' : 'border-gray-200'
       }`}
+      onClick={onViewDetails}
     >
       <div className="p-2 flex items-center gap-3">
         {/* Complete Button */}
         <button
-          onClick={handleToggleComplete}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleToggleComplete();
+          }}
           className={`flex-shrink-0 p-1.5 rounded-lg transition-all ${
             task.completed 
               ? 'text-green-500' 
@@ -90,7 +96,12 @@ export default function TaskListItem({ task, userName, partnerName, currentUser,
         {/* Deadline */}
         <div className={`flex items-center gap-1 text-xs flex-shrink-0 ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
           <Calendar size={12} />
-          <span>{format(new Date(task.deadline), 'MMM d')}</span>
+          <span>{task.deadline instanceof Date && !isNaN(task.deadline.getTime()) 
+            ? format(task.deadline, 'MMM d') 
+            : 'Invalid date'}</span>
+          {task.deadline instanceof Date && !isNaN(task.deadline.getTime()) && (
+            <SeasonalEmoji date={task.deadline} size="small" />
+          )}
         </div>
 
         {/* Urgency */}
@@ -132,7 +143,10 @@ export default function TaskListItem({ task, userName, partnerName, currentUser,
         {/* Actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
           <button
-            onClick={onViewDetails}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
             className="p-1.5 text-gray-500 hover:bg-gray-50 rounded transition-colors"
             onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
@@ -140,7 +154,10 @@ export default function TaskListItem({ task, userName, partnerName, currentUser,
             <Edit size={14} />
           </button>
           <button
-            onClick={onDelete}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
             className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
           >
             <Trash2 size={14} />

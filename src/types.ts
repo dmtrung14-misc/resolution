@@ -3,12 +3,21 @@ export type Urgency = 'low' | 'medium' | 'high';
 export type TaskType = 'regular' | 'countable';
 export type UserRole = 'doggo' | 'ducko';
 
+export interface Reaction {
+  emoji: string;
+  users: ('me' | 'her')[];
+}
+
 export interface Comment {
   id: string;
   text: string;
   author: 'me' | 'her';
   timestamp: Date;
   photos?: string[];
+  gifUrl?: string; // GIF link
+  replyTo?: string; // ID of the comment being replied to
+  replies?: Comment[]; // Nested replies
+  reactions?: Reaction[]; // Reactions to the comment
 }
 
 export interface Task {
@@ -21,6 +30,7 @@ export interface Task {
   type: TaskType;
   completed: boolean;
   createdAt: Date;
+  tags?: string[]; // Optional tags for categorization
   
   // For countable tasks
   targetCount?: number;

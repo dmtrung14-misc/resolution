@@ -64,5 +64,105 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(to bottom, #2563eb, #059669);
   }
+  
+  /* Seasonal emoji animations */
+  .seasonal-emoji {
+    display: inline-block;
+    animation-duration: 3s;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+  }
+
+  /* Spring - Cherry blossom floating */
+  @keyframes spring-float {
+    0%, 100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    25% {
+      transform: translateY(-8px) rotate(5deg);
+    }
+    75% {
+      transform: translateY(-4px) rotate(-5deg);
+    }
+  }
+
+  .seasonal-spring {
+    animation-name: spring-float;
+  }
+
+  /* Summer - Beach umbrella swaying */
+  @keyframes summer-sway {
+    0%, 100% {
+      transform: rotate(0deg);
+    }
+    25% {
+      transform: rotate(8deg);
+    }
+    75% {
+      transform: rotate(-8deg);
+    }
+  }
+
+  .seasonal-summer {
+    animation-name: summer-sway;
+    transform-origin: bottom center;
+  }
+
+  /* Fall - Falling leaf */
+  @keyframes fall-leaf {
+    0% {
+      transform: translateY(-5px) rotate(0deg);
+    }
+    25% {
+      transform: translateY(0px) rotate(15deg);
+    }
+    50% {
+      transform: translateY(5px) rotate(-15deg);
+    }
+    75% {
+      transform: translateY(0px) rotate(10deg);
+    }
+    100% {
+      transform: translateY(-5px) rotate(0deg);
+    }
+  }
+
+  .seasonal-fall {
+    animation-name: fall-leaf;
+  }
+
+  /* Winter - Snow drifting */
+  @keyframes winter-drift {
+    0%, 100% {
+      transform: translateX(0px) translateY(0px);
+    }
+    25% {
+      transform: translateX(6px) translateY(-3px);
+    }
+    50% {
+      transform: translateX(-3px) translateY(3px);
+    }
+    75% {
+      transform: translateX(8px) translateY(-2px);
+    }
+  }
+
+  .seasonal-winter {
+    animation-name: winter-drift;
+  }
+  
+  /* Side panel slide-in animation */
+  @keyframes slideInRight {
+    0% {
+      transform: translateX(100%);
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+  
+  .slide-in-right {
+    animation: slideInRight 0.3s ease-out forwards;
+  }
 }
 

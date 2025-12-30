@@ -2,6 +2,7 @@ import { Task, Assignee, UserRole } from '../types';
 import { Calendar, AlertCircle, Trash2, Edit, MessageCircle, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import ProgressRing from './ProgressRing';
+import SeasonalEmoji from './SeasonalEmoji';
 import { celebrateTaskCompletion } from '../utils/customCelebrations';
 
 interface TaskCardProps {
@@ -40,7 +41,8 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
     return 'text-gray-600';
   };
 
-  const isOverdue = !task.completed && new Date(task.deadline) < new Date();
+  const deadline = task.deadline instanceof Date ? task.deadline : new Date(task.deadline);
+  const isOverdue = !task.completed && deadline instanceof Date && !isNaN(deadline.getTime()) && deadline < new Date();
 
   const handleToggleComplete = () => {
     if (!task.completed) {
@@ -55,14 +57,15 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
 
   return (
     <div 
-      className={`bg-white rounded-lg border transition-all hover:border-primary-300 ${
+      className={`bg-white rounded-lg border transition-all hover:border-primary-300 cursor-pointer ${
         task.completed ? 'border-green-300 opacity-90' : isOverdue ? 'border-red-300' : 'border-gray-200'
       }`}
+      onClick={onViewDetails}
     >
-      <div className="p-5">
+      <div className="p-5" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
-          <div className="flex-1">
+          <div className="flex-1 cursor-pointer" onClick={onViewDetails}>
             <h3 className={`font-semibold text-lg mb-2 ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
               {task.title}
             </h3>
@@ -80,7 +83,10 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
             />
           ) : (
             <button
-              onClick={handleToggleComplete}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleComplete();
+              }}
               className={`p-2 rounded-lg transition-all ${
                 task.completed 
                   ? 'text-green-500' 
@@ -93,7 +99,7 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
         </div>
 
         {/* Description */}
-        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+        <p className="text-gray-600 text-sm mb-4 line-clamp-2 cursor-pointer" onClick={onViewDetails}>
           {task.description}
         </p>
 
@@ -123,9 +129,14 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <div className="flex items-center gap-4 text-sm">
-            <div className={`flex items-center gap-1 ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+            <div className={`flex items-center gap-1.5 ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
               <Calendar size={14} />
-              <span>{format(new Date(task.deadline), 'MMM d, yyyy')}</span>
+              <span>{task.deadline instanceof Date && !isNaN(task.deadline.getTime()) 
+                ? format(task.deadline, 'MMM d, yyyy') 
+                : 'Invalid date'}</span>
+              {task.deadline instanceof Date && !isNaN(task.deadline.getTime()) && (
+                <SeasonalEmoji date={task.deadline} size="small" />
+              )}
             </div>
             <div className={`flex items-center gap-1 ${getUrgencyColor(task.urgency)}`}>
               <AlertCircle size={14} />
@@ -136,7 +147,10 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
           <div className="flex items-center gap-2">
             {task.comments.length > 0 && (
               <button
-                onClick={onViewDetails}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewDetails();
+                }}
                 className="p-1.5 text-gray-500 hover:bg-gray-50 rounded transition-colors relative"
                 style={{ color: task.comments.length > 0 ? '#3b82f6' : undefined }}
                 onMouseEnter={(e) => e.currentTarget.style.color = '#10b981'}
@@ -154,7 +168,10 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
               </button>
             )}
             <button
-              onClick={onEdit}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
               className="p-1.5 text-gray-500 hover:bg-gray-50 rounded transition-colors"
               onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'}
               onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
@@ -162,7 +179,10 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
               <Edit size={16} />
             </button>
             <button
-              onClick={onDelete}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
               className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
             >
               <Trash2 size={16} />
@@ -173,7 +193,10 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
 
       {/* View Details Button */}
       <button
-        onClick={onViewDetails}
+        onClick={(e) => {
+          e.stopPropagation();
+          onViewDetails();
+        }}
         className="w-full py-2.5 text-sm font-medium transition-all border-t border-gray-100 hover:bg-gray-50"
         style={{
           background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)',

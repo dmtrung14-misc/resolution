@@ -23,7 +23,7 @@ export default function TaskModal({ userName, partnerName, editingTask, onSave, 
   const [type, setType] = useState<TaskType>(editingTask?.type || 'regular');
   const [targetCount, setTargetCount] = useState(editingTask?.targetCount?.toString() || '');
   const [currentCount, setCurrentCount] = useState(editingTask?.currentCount?.toString() || '0');
-  const [countLabel, setCountLabel] = useState(editingTask?.countLabel || '');
+  const [tags, setTags] = useState(editingTask?.tags?.join(', ') || '');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,12 +37,13 @@ export default function TaskModal({ userName, partnerName, editingTask, onSave, 
       type,
       completed: editingTask?.completed || false,
       comments: editingTask?.comments || [],
+      tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(t => t) : undefined,
     };
 
     if (type === 'countable') {
       taskData.targetCount = parseInt(targetCount);
       taskData.currentCount = parseInt(currentCount);
-      taskData.countLabel = countLabel;
+      taskData.countLabel = 'items';
     }
 
     onSave(taskData);
@@ -91,6 +92,23 @@ export default function TaskModal({ userName, partnerName, editingTask, onSave, 
               rows={3}
               className="input-field"
             />
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tags <span className="text-gray-400 text-xs">(comma-separated)</span>
+            </label>
+            <input
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="e.g., food, travel, study"
+              className="input-field"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Add tags to get custom celebration emojis! Try: food, cooking, movie, travel, study, photo, career, art, music
+            </p>
           </div>
 
           {/* Type */}
@@ -164,19 +182,6 @@ export default function TaskModal({ userName, partnerName, editingTask, onSave, 
                   placeholder="0"
                   min="0"
                   className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Label *
-                </label>
-                <input
-                  type="text"
-                  value={countLabel}
-                  onChange={(e) => setCountLabel(e.target.value)}
-                  placeholder="books"
-                  className="input-field"
-                  required
                 />
               </div>
             </div>

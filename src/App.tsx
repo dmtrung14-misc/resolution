@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Task, AppState, UserRole } from './types';
 import { firebaseService } from './services/firebaseService';
 import { authService } from './services/authService';
+import { celebrateTaskCreation } from './utils/customCelebrations';
 import Header from './components/Header';
 import TaskCard from './components/TaskCard';
 import TaskListItem from './components/TaskListItem';
@@ -86,10 +87,14 @@ function App() {
   useEffect(() => {
     if (isLoading || !isAuthenticated) return; // Don't save during initial load or if not authenticated
     
+    console.log('State changed, scheduling save. Task count:', state.tasks.length);
+    
     const saveData = async () => {
       setIsSaving(true);
+      console.log('Saving state to Firebase...');
       try {
         await firebaseService.saveState(state);
+        console.log('Save completed');
       } catch (error) {
         console.error('Error saving to Firebase:', error);
       } finally {
@@ -137,15 +142,23 @@ function App() {
       ...prev,
       tasks: [...prev.tasks, newTask],
     }));
+    
+    // Celebrate task creation with tag-based or seasonal animation
+    celebrateTaskCreation(new Date(task.deadline), task.tags);
   };
 
   const updateTask = (id: string, updates: Partial<Task>) => {
-    setState(prev => ({
-      ...prev,
-      tasks: prev.tasks.map(task => 
+    console.log('updateTask called:', { id, updates });
+    setState(prev => {
+      const updatedTasks = prev.tasks.map(task => 
         task.id === id ? { ...task, ...updates } : task
-      ),
-    }));
+      );
+      console.log('Updated tasks:', updatedTasks.find(t => t.id === id));
+      return {
+        ...prev,
+        tasks: updatedTasks,
+      };
+    });
   };
 
   const deleteTask = (id: string) => {

@@ -13,10 +13,10 @@ export const celebrateTaskCompletion = (completedBy: 'doggo' | 'ducko') => {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 120px;
     z-index: 10000;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+    padding: 20px;
   `;
   
   // Add keyframe animation
@@ -48,8 +48,28 @@ export const celebrateTaskCompletion = (completedBy: 'doggo' | 'ducko') => {
     document.head.appendChild(style);
   }
   
-  // Set the main profile emoji
-  profilePic.textContent = completedBy === 'doggo' ? '🐶' : '🐥';
+  // Set the main profile emoji using Noto Emoji Animation
+  const picture = document.createElement('picture');
+  const source = document.createElement('source');
+  const img = document.createElement('img');
+  
+  if (completedBy === 'doggo') {
+    source.srcset = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f415/512.webp';
+    source.type = 'image/webp';
+    img.src = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f415/512.gif';
+    img.alt = '🐕';
+  } else {
+    source.srcset = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f425/512.webp';
+    source.type = 'image/webp';
+    img.src = 'https://fonts.gstatic.com/s/e/notoemoji/latest/1f425/512.gif';
+    img.alt = '🐥';
+  }
+  
+  img.style.cssText = 'width: 160px; height: 160px;';
+  picture.appendChild(source);
+  picture.appendChild(img);
+  profilePic.appendChild(picture);
+  
   document.body.appendChild(profilePic);
   
   // Create RAINING emojis - DUCK/DOG RAIN!
@@ -102,6 +122,212 @@ export const celebrateTaskCompletion = (completedBy: 'doggo' | 'ducko') => {
   setTimeout(() => {
     fallers.forEach(faller => faller.remove());
   }, 5000);
+};
+
+export const celebrateTaskCreation = (deadline: Date, tags?: string[]) => {
+  // Tag-to-emoji mapping
+  const tagEmojiMap: { [key: string]: string[] } = {
+    // Food related (randomly choose one)
+    'food': ['1f35c', '1f32f', '1f35d'], // 🍜 🌯 🍝
+    'restaurant': ['1f35c', '1f32f', '1f35d'],
+    'dining': ['1f35c', '1f32f', '1f35d'],
+    'eating': ['1f35c', '1f32f', '1f35d'],
+    'lunch': ['1f35c', '1f32f', '1f35d'],
+    'dinner': ['1f35c', '1f32f', '1f35d'],
+    'brunch': ['1f35c', '1f32f', '1f35d'],
+    'meal': ['1f35c', '1f32f', '1f35d'],
+    
+    // Cooking
+    'cooking': ['1f373'], // 🍳
+    'cook': ['1f373'],
+    'recipe': ['1f373'],
+    'baking': ['1f373'],
+    'kitchen': ['1f373'],
+    
+    // Movie nights
+    'movie': ['1f37f'], // 🍿
+    'film': ['1f37f'],
+    'cinema': ['1f37f'],
+    'watching': ['1f37f'],
+    'netflix': ['1f37f'],
+    'show': ['1f37f'],
+    'series': ['1f37f'],
+    
+    // Travel
+    'travel': ['1f3d5_fe0f'], // 🏕
+    'trip': ['1f3d5_fe0f'],
+    'vacation': ['1f3d5_fe0f'],
+    'holiday': ['1f3d5_fe0f'],
+    'adventure': ['1f3d5_fe0f'],
+    'camping': ['1f3d5_fe0f'],
+    'hiking': ['1f3d5_fe0f'],
+    'explore': ['1f3d5_fe0f'],
+    
+    // Study
+    'study': ['270d_1f3fc'], // ✍
+    'studying': ['270d_1f3fc'],
+    'learning': ['270d_1f3fc'],
+    'education': ['270d_1f3fc'],
+    'homework': ['270d_1f3fc'],
+    'exam': ['270d_1f3fc'],
+    'reading': ['270d_1f3fc'],
+    'book': ['270d_1f3fc'],
+    'research': ['270d_1f3fc'],
+    
+    // Photo
+    'photo': ['1f4f8'], // 📸
+    'photography': ['1f4f8'],
+    'camera': ['1f4f8'],
+    'picture': ['1f4f8'],
+    'photoshoot': ['1f4f8'],
+    
+    // Career
+    'career': ['1f4b8'], // 💸
+    'work': ['1f4b8'],
+    'job': ['1f4b8'],
+    'interview': ['1f4b8'],
+    'business': ['1f4b8'],
+    'professional': ['1f4b8'],
+    'meeting': ['1f4b8'],
+    
+    // Art/Music
+    'art': ['1f3bb'], // 🎻
+    'piano': ['1f3bb'],
+    'violin': ['1f3bb'],
+    'duet': ['1f3bb'],
+    'music': ['1f3bb'],
+    'instrument': ['1f3bb'],
+    'practice': ['1f3bb'],
+    'concert': ['1f3bb'],
+    'performance': ['1f3bb'],
+  };
+  
+  let emojiCode: string | null = null;
+  
+  // Check tags first (case-insensitive)
+  if (tags && tags.length > 0) {
+    for (const tag of tags) {
+      const lowerTag = tag.toLowerCase();
+      if (tagEmojiMap[lowerTag]) {
+        const options = tagEmojiMap[lowerTag];
+        // Randomly select if multiple options
+        emojiCode = options[Math.floor(Math.random() * options.length)];
+        break; // Stop at first match
+      }
+    }
+  }
+  
+  // Fall back to season if no tag match
+  if (!emojiCode) {
+    const month = deadline.getMonth();
+    
+    if (month >= 2 && month <= 4) {
+      emojiCode = '1f331'; // 🌱 Seedling
+    } else if (month >= 5 && month <= 7) {
+      emojiCode = '26f5'; // ⛵ Sailboat
+    } else if (month >= 8 && month <= 10) {
+      emojiCode = '1f342'; // 🍂 Fallen Leaf
+    } else {
+      emojiCode = '2744'; // ❄️ Snowflake
+    }
+  }
+  
+  // Add keyframe animation if not exists
+  if (!document.getElementById('celebration-styles')) {
+    const style = document.createElement('style');
+    style.id = 'celebration-styles';
+    style.textContent = `
+      @keyframes popIn {
+        0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); }
+        50% { transform: translate(-50%, -50%) scale(1.2) rotate(10deg); }
+        100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+      }
+      
+      @keyframes popOut {
+        0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  // Create celebration - just the emoji, no background
+  const celebration = document.createElement('div');
+  celebration.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 10000;
+    animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+  `;
+  
+  // Create the animated emoji using Noto Emoji
+  const picture = document.createElement('picture');
+  const source = document.createElement('source');
+  const img = document.createElement('img');
+  
+  source.srcset = `https://fonts.gstatic.com/s/e/notoemoji/latest/${emojiCode}/512.webp`;
+  source.type = 'image/webp';
+  img.src = `https://fonts.gstatic.com/s/e/notoemoji/latest/${emojiCode}/512.gif`;
+  img.style.cssText = 'width: 150px; height: 150px;';
+  
+  picture.appendChild(source);
+  picture.appendChild(img);
+  celebration.appendChild(picture);
+  document.body.appendChild(celebration);
+  
+  // Create some sparkles
+  const sparkleCount = 12;
+  const sparkles: HTMLDivElement[] = [];
+  
+  for (let i = 0; i < sparkleCount; i++) {
+    const sparkle = document.createElement('div');
+    const angle = (i / sparkleCount) * Math.PI * 2;
+    const distance = 150 + Math.random() * 50;
+    const xOffset = Math.cos(angle) * distance;
+    const yOffset = Math.sin(angle) * distance;
+    
+    sparkle.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      font-size: 24px;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+    `;
+    sparkle.textContent = '✨';
+    
+    // Animate manually with setTimeout
+    document.body.appendChild(sparkle);
+    
+    setTimeout(() => {
+      sparkle.style.transition = 'all 0.8s ease-out';
+      sparkle.style.opacity = '1';
+      sparkle.style.transform = `translate(calc(-50% + ${xOffset}px), calc(-50% + ${yOffset}px)) scale(1.5)`;
+      
+      setTimeout(() => {
+        sparkle.style.opacity = '0';
+      }, 400);
+    }, i * 50);
+    
+    sparkles.push(sparkle);
+  }
+  
+  // Remove celebration after animation
+  setTimeout(() => {
+    celebration.style.animation = 'popOut 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards';
+    setTimeout(() => {
+      celebration.remove();
+    }, 300);
+  }, 2000);
+  
+  // Remove sparkles
+  setTimeout(() => {
+    sparkles.forEach(sparkle => sparkle.remove());
+  }, 1500);
 };
 
 export const celebrateMilestoneCustom = (percentage: number, user: 'doggo' | 'ducko') => {

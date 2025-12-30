@@ -22,26 +22,110 @@ import { Task, AppState, Comment } from '../types';
 const COLLECTION_NAME = 'resolutions';
 const STATE_DOC_ID = 'appState';
 
+// Recursively convert comment timestamps
+const convertCommentTimestamps = (comment: any): any => {
+  if (!comment) return comment;
+  
+  let timestamp = comment.timestamp;
+  
+  if (comment.timestamp?.toDate) {
+    timestamp = comment.timestamp.toDate();
+  } else if (comment.timestamp && typeof comment.timestamp === 'string') {
+    timestamp = new Date(comment.timestamp);
+  } else if (comment.timestamp && !(comment.timestamp instanceof Date)) {
+    timestamp = new Date(comment.timestamp);
+  }
+  
+  const converted = {
+    ...comment,
+    timestamp,
+  };
+  
+  // Recursively process replies
+  if (comment.replies && Array.isArray(comment.replies)) {
+    converted.replies = comment.replies.map(convertCommentTimestamps);
+  }
+  
+  return converted;
+};
+
 // Convert Firestore timestamp to Date
 const convertTimestamps = (data: any): any => {
   if (!data) return data;
   
   const converted = { ...data };
   
+  console.log('Converting timestamps for task:', data.title, {
+    deadlineRaw: data.deadline,
+    deadlineType: typeof data.deadline,
+    hasToDate: data.deadline?.toDate ? 'yes' : 'no'
+  });
+  
   if (data.deadline?.toDate) {
     converted.deadline = data.deadline.toDate();
-  }
-  if (data.createdAt?.toDate) {
-    converted.createdAt = data.createdAt.toDate();
-  }
-  if (data.comments) {
-    converted.comments = data.comments.map((comment: any) => ({
-      ...comment,
-      timestamp: comment.timestamp?.toDate ? comment.timestamp.toDate() : comment.timestamp,
-    }));
+    console.log('Converted deadline using toDate():', converted.deadline);
+  } else if (data.deadline && typeof data.deadline === 'string') {
+    // Handle string dates
+    converted.deadline = new Date(data.deadline);
+    console.log('Converted deadline from string:', converted.deadline);
+  } else if (data.deadline) {
+    // Already a date or something else
+    converted.deadline = data.deadline instanceof Date ? data.deadline : new Date(data.deadline);
+    console.log('Converted deadline from other:', converted.deadline);
   }
   
+  if (data.createdAt?.toDate) {
+    converted.createdAt = data.createdAt.toDate();
+  } else if (data.createdAt && typeof data.createdAt === 'string') {
+    converted.createdAt = new Date(data.createdAt);
+  } else if (data.createdAt) {
+    converted.createdAt = data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt);
+  }
+  
+  if (data.comments) {
+    converted.comments = data.comments.map(convertCommentTimestamps);
+  }
+  
+  console.log('Final converted deadline:', converted.deadline, 'isValid:', converted.deadline instanceof Date && !isNaN(converted.deadline.getTime()));
+  
   return converted;
+};
+
+// Remove undefined values from object
+const removeUndefined = (obj: any): any => {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(removeUndefined);
+  // Don't process Date objects or Timestamps - return them as-is
+  if (obj instanceof Date || obj?.toDate) return obj;
+  if (typeof obj !== 'object') return obj;
+  
+  const cleaned: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      cleaned[key] = removeUndefined(value);
+    }
+  }
+  return cleaned;
+};
+
+// Recursively convert comment dates to timestamps
+const convertCommentToTimestamps = (comment: any): any => {
+  if (!comment) return comment;
+  
+  const converted = {
+    ...comment,
+    timestamp: comment.timestamp instanceof Date 
+      ? Timestamp.fromDate(comment.timestamp) 
+      : comment.timestamp,
+  };
+  
+  // Recursively process replies
+  if (comment.replies && Array.isArray(comment.replies)) {
+    converted.replies = comment.replies.map(convertCommentToTimestamps);
+  }
+  
+  // Remove undefined values
+  return removeUndefined(converted);
 };
 
 // Convert Date to Firestore timestamp
@@ -55,15 +139,11 @@ const convertToTimestamps = (data: any): any => {
     converted.createdAt = Timestamp.fromDate(data.createdAt);
   }
   if (data.comments) {
-    converted.comments = data.comments.map((comment: any) => ({
-      ...comment,
-      timestamp: comment.timestamp instanceof Date 
-        ? Timestamp.fromDate(comment.timestamp) 
-        : comment.timestamp,
-    }));
+    converted.comments = data.comments.map(convertCommentToTimestamps);
   }
   
-  return converted;
+  // Remove all undefined values before saving
+  return removeUndefined(converted);
 };
 
 export const firebaseService = {
@@ -75,11 +155,36 @@ export const firebaseService = {
       
       if (docSnap.exists()) {
         const data = docSnap.data();
-        return {
+        
+        console.log('Raw data from Firebase (first task):', data.tasks?.[0]);
+        console.log('Raw deadline:', data.tasks?.[0]?.deadline);
+        console.log('Deadline structure:', {
+          value: data.tasks?.[0]?.deadline,
+          hasToDate: typeof data.tasks?.[0]?.deadline?.toDate,
+          seconds: data.tasks?.[0]?.deadline?.seconds,
+          nanoseconds: data.tasks?.[0]?.deadline?.nanoseconds,
+        });
+        
+        const loadedState = {
           userName: data.userName || '',
           partnerName: data.partnerName || '',
           tasks: (data.tasks || []).map(convertTimestamps),
         };
+        
+        console.log('Loaded state from Firebase:', {
+          taskCount: loadedState.tasks.length,
+          tasks: loadedState.tasks.map((t: any) => ({
+            id: t.id,
+            title: t.title,
+            deadline: t.deadline,
+            deadlineType: typeof t.deadline,
+            deadlineIsDate: t.deadline instanceof Date,
+            deadlineValid: t.deadline instanceof Date && !isNaN(t.deadline.getTime()),
+            commentCount: t.comments?.length || 0
+          }))
+        });
+        
+        return loadedState;
       }
       return null;
     } catch (error) {
@@ -99,7 +204,17 @@ export const firebaseService = {
         updatedAt: Timestamp.now(),
       };
       
+      console.log('Saving state to Firebase:', {
+        taskCount: dataToSave.tasks.length,
+        tasks: dataToSave.tasks.map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          commentCount: t.comments?.length || 0
+        }))
+      });
+      
       await setDoc(docRef, dataToSave);
+      console.log('State saved successfully');
     } catch (error) {
       console.error('Error saving state to Firebase:', error);
       throw error;
