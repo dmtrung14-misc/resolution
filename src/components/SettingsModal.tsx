@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
-import { X, Loader2, LogOut } from 'lucide-react';
+import { useState } from 'react';
+import { X, User, Key, Info, LogOut, ChevronRight } from 'lucide-react';
 import { UserRole } from '../types';
-import { authService } from '../services/authService';
+import ChangeDisplayNameModal from './ChangeDisplayNameModal';
+import ChangePasswordModal from './ChangePasswordModal';
+import FeatureGuide from './FeatureGuide';
 
 interface SettingsModalProps {
   currentUser: UserRole;
@@ -10,79 +12,9 @@ interface SettingsModalProps {
 }
 
 export default function SettingsModal({ currentUser, onClose, onLogout }: SettingsModalProps) {
-  const [displayName, setDisplayName] = useState('');
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  useEffect(() => {
-    loadProfile();
-  }, [currentUser]);
-
-  const loadProfile = async () => {
-    const profile = await authService.getUserProfile(currentUser);
-    if (profile) {
-      setDisplayName(profile.displayName);
-    }
-  };
-
-  const handleUpdateDisplayName = async () => {
-    if (!displayName.trim()) {
-      setMessage({ type: 'error', text: 'Display name cannot be empty' });
-      return;
-    }
-
-    setIsLoading(true);
-    setMessage(null);
-
-    try {
-      await authService.updateDisplayName(currentUser, displayName.trim());
-      setMessage({ type: 'success', text: 'Display name updated!' });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to update display name' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleUpdatePassword = async () => {
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      setMessage({ type: 'error', text: 'Please fill in all password fields' });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setMessage({ type: 'error', text: 'New passwords do not match' });
-      return;
-    }
-
-    if (newPassword.length < 4) {
-      setMessage({ type: 'error', text: 'Password must be at least 4 characters' });
-      return;
-    }
-
-    setIsLoading(true);
-    setMessage(null);
-
-    try {
-      const success = await authService.updatePassword(currentUser, oldPassword, newPassword);
-      
-      if (success) {
-        setMessage({ type: 'success', text: 'Password updated successfully!' });
-        setOldPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      } else {
-        setMessage({ type: 'error', text: 'Incorrect old password' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to update password' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [showDisplayNameModal, setShowDisplayNameModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showFeatureGuide, setShowFeatureGuide] = useState(false);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -100,93 +32,58 @@ export default function SettingsModal({ currentUser, onClose, onLogout }: Settin
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Display Name Section */}
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 mb-3">Display Name</h3>
-            <p className="text-sm text-gray-600 mb-3">
-              Change how your name appears in the app (for fun inside jokes!)
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your display name"
-                className="input-field flex-1"
-                disabled={isLoading}
-              />
-              <button
-                onClick={handleUpdateDisplayName}
-                disabled={isLoading}
-                style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)' }}
-                className="px-4 py-2 hover:brightness-110 text-white rounded-lg transition-all disabled:opacity-50 shadow-sm"
-              >
-                Update
-              </button>
+        <div className="p-6 space-y-3">
+          {/* Settings Options */}
+          <button
+            onClick={() => setShowDisplayNameModal(true)}
+            className="w-full flex items-center justify-between px-4 py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                <User size={20} className="text-blue-600" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium text-gray-900">Change Display Name</div>
+                <div className="text-sm text-gray-500">Update how your name appears</div>
+              </div>
             </div>
-          </div>
+            <ChevronRight size={20} className="text-gray-400 group-hover:text-gray-600" />
+          </button>
 
-          {/* Password Section */}
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 mb-3">Change Password</h3>
-            <div className="space-y-3">
-              <input
-                type="password"
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                placeholder="Current password"
-                className="input-field"
-                disabled={isLoading}
-              />
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="New password"
-                className="input-field"
-                disabled={isLoading}
-              />
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm new password"
-                className="input-field"
-                disabled={isLoading}
-              />
-              <button
-                onClick={handleUpdatePassword}
-                disabled={isLoading}
-                className="w-full btn-primary"
-              >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="animate-spin" size={18} />
-                    Updating...
-                  </span>
-                ) : (
-                  'Update Password'
-                )}
-              </button>
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            className="w-full flex items-center justify-between px-4 py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors">
+                <Key size={20} className="text-green-600" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium text-gray-900">Change Password</div>
+                <div className="text-sm text-gray-500">Update your password</div>
+              </div>
             </div>
-          </div>
+            <ChevronRight size={20} className="text-gray-400 group-hover:text-gray-600" />
+          </button>
 
-          {/* Message Display */}
-          {message && (
-            <div
-              className={`px-4 py-3 rounded-lg text-sm ${
-                message.type === 'success'
-                  ? 'bg-green-50 border border-green-200 text-green-700'
-                  : 'bg-red-50 border border-red-200 text-red-700'
-              }`}
-            >
-              {message.text}
+          <button
+            onClick={() => setShowFeatureGuide(true)}
+            className="w-full flex items-center justify-between px-4 py-4 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
+                <Info size={20} className="text-purple-600" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium text-gray-900">Feature Guide</div>
+                <div className="text-sm text-gray-500">Learn about app features</div>
+              </div>
             </div>
-          )}
+            <ChevronRight size={20} className="text-gray-400 group-hover:text-gray-600" />
+          </button>
 
-          {/* Logout Section */}
-          <div className="pt-4 border-t border-gray-200">
+          {/* Logout Button */}
+          <div className="pt-3 border-t border-gray-200">
             <button
               onClick={onLogout}
               className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
@@ -196,6 +93,25 @@ export default function SettingsModal({ currentUser, onClose, onLogout }: Settin
             </button>
           </div>
         </div>
+        
+        {/* Sub-modals */}
+        {showDisplayNameModal && (
+          <ChangeDisplayNameModal
+            currentUser={currentUser}
+            onClose={() => setShowDisplayNameModal(false)}
+          />
+        )}
+        
+        {showPasswordModal && (
+          <ChangePasswordModal
+            currentUser={currentUser}
+            onClose={() => setShowPasswordModal(false)}
+          />
+        )}
+        
+        {showFeatureGuide && (
+          <FeatureGuide onClose={() => setShowFeatureGuide(false)} />
+        )}
       </div>
     </div>
   );

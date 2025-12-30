@@ -10,8 +10,7 @@ import TaskModal from './components/TaskModal';
 import TaskDetailModal from './components/TaskDetailModal';
 import LoginModal from './components/LoginModal';
 import SettingsModal from './components/SettingsModal';
-import FeatureGuide from './components/FeatureGuide';
-import { Plus, Info, Loader2, LayoutGrid, List } from 'lucide-react';
+import { Plus, Loader2, LayoutGrid, List, ChevronDown } from 'lucide-react';
 
 function App() {
   const [state, setState] = useState<AppState>({
@@ -26,9 +25,10 @@ function App() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [showFeatureGuide, setShowFeatureGuide] = useState(false);
   const [filter, setFilter] = useState<'my' | 'partner' | 'together' | null>(null);
   const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'name' | 'priority' | 'deadline' | 'interaction'>('deadline');
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -188,6 +188,20 @@ function App() {
   const myAssignee: Assignee = 'me';
   const partnerAssignee: Assignee = 'her';
   
+  // Helper function to get latest interaction time
+  const getLatestInteraction = (task: Task): Date => {
+    const commentTimes = task.comments.map(c => c.timestamp);
+    const allTimes = [task.createdAt, ...commentTimes];
+    return new Date(Math.max(...allTimes.map(t => t.getTime())));
+  };
+
+  // Helper function for urgency sorting (high > medium > low)
+  const getUrgencyValue = (urgency: Urgency): number => {
+    if (urgency === 'high') return 3;
+    if (urgency === 'medium') return 2;
+    return 1;
+  };
+  
   const filteredTasks = state.tasks.filter(task => {
     if (filter === null) {
       // No filter selected - show all tasks
@@ -203,6 +217,25 @@ function App() {
       return task.assignee === 'together';
     }
     return true;
+  });
+
+  // Sort tasks based on selected sort option
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    switch (sortBy) {
+      case 'name':
+        return a.title.localeCompare(b.title);
+      case 'priority':
+        // Sort by urgency (high first), then by deadline
+        const urgencyDiff = getUrgencyValue(b.urgency) - getUrgencyValue(a.urgency);
+        if (urgencyDiff !== 0) return urgencyDiff;
+        return a.deadline.getTime() - b.deadline.getTime();
+      case 'deadline':
+        return a.deadline.getTime() - b.deadline.getTime();
+      case 'interaction':
+        return getLatestInteraction(b).getTime() - getLatestInteraction(a).getTime();
+      default:
+        return 0;
+    }
   });
   
   // Vietnamese greeting message based on current user
@@ -250,7 +283,7 @@ function App() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filter Tabs and Display Mode Toggle */}
+        {/* Filter Tabs, Sort, and Display Mode Toggle */}
         <div className="flex items-center justify-between mb-6 gap-4">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             {(['my', 'partner', 'together'] as const).map((f) => {
@@ -284,19 +317,70 @@ function App() {
           })}
           </div>
 
-          {/* Display Mode Toggle */}
-          <div className="flex gap-1 bg-white rounded-lg border border-gray-200 p-1">
-            <button
-              onClick={() => setDisplayMode('grid')}
-              className={`p-2 rounded transition-all ${
-                displayMode === 'grid'
-                  ? 'text-white shadow-sm'
-                  : 'text-gray-500 hover:bg-gray-50'
-              }`}
-              style={displayMode === 'grid' ? { background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)' } : {}}
-              title="Grid view"
-            >
-              <LayoutGrid size={18} />
+          <div className="flex items-center gap-2">
+            {/* Sort Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSortDropdown(!showSortDropdown)}
+                className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-4 py-2 hover:border-blue-300 transition-colors shadow-sm"
+              >
+                <span className="text-sm text-gray-500 whitespace-nowrap">Sort by</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {sortBy === 'deadline' ? 'Deadline' : 
+                   sortBy === 'name' ? 'Name' : 
+                   sortBy === 'priority' ? 'Priority' : 
+                   'Latest Activity'}
+                </span>
+                <ChevronDown size={16} className={`text-blue-500 transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {/* Dropdown Menu */}
+              {showSortDropdown && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setShowSortDropdown(false)}
+                  />
+                  <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden min-w-[180px]">
+                    {[
+                      { value: 'deadline', label: 'Deadline' },
+                      { value: 'name', label: 'Name' },
+                      { value: 'priority', label: 'Priority' },
+                      { value: 'interaction', label: 'Latest Activity' }
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setSortBy(option.value as any);
+                          setShowSortDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                          sortBy === option.value
+                            ? 'bg-gray-200 text-gray-900 font-medium'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Display Mode Toggle */}
+            <div className="flex gap-1 bg-white rounded-lg border border-gray-200 p-1">
+              <button
+                onClick={() => setDisplayMode('grid')}
+                className={`p-2 rounded transition-all ${
+                  displayMode === 'grid'
+                    ? 'text-white shadow-sm'
+                    : 'text-gray-500 hover:bg-gray-50'
+                }`}
+                style={displayMode === 'grid' ? { background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)' } : {}}
+                title="Grid view"
+              >
+                <LayoutGrid size={18} />
             </button>
             <button
               onClick={() => setDisplayMode('list')}
@@ -310,6 +394,7 @@ function App() {
             >
               <List size={18} />
             </button>
+          </div>
           </div>
         </div>
 
@@ -334,14 +419,14 @@ function App() {
               <p className="text-gray-500 text-lg">Choose a category above to see your tasks</p>
             </div>
           </div>
-        ) : filteredTasks.length === 0 ? (
+        ) : sortedTasks.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-gray-500 text-lg mb-4">No resolutions in this category yet!</p>
             <p className="text-gray-400 mb-8">Start by adding your first goal</p>
           </div>
         ) : displayMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTasks.map(task => (
+            {sortedTasks.map(task => (
               <TaskCard
                 key={task.id}
                 task={task}
@@ -357,7 +442,7 @@ function App() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredTasks.map(task => (
+            {sortedTasks.map(task => (
               <TaskListItem
                 key={task.id}
                 task={task}
@@ -372,26 +457,17 @@ function App() {
             ))}
           </div>
         )}
-
-        {/* Action Buttons */}
-        <button
-          onClick={() => setIsTaskModalOpen(true)}
-          style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)' }}
-          className="fixed bottom-8 right-8 hover:brightness-110 text-white rounded-full p-4 transition-all hover:scale-110 focus:outline-none focus:ring-4 focus:ring-primary-300 shadow-lg"
-          aria-label="Add new resolution"
-        >
-          <Plus size={28} />
-        </button>
-
-        <button
-          onClick={() => setShowFeatureGuide(true)}
-          style={{ background: 'linear-gradient(135deg, #dbeafe 0%, #d1fae5 100%)' }}
-          className="fixed bottom-8 left-8 hover:brightness-95 text-gray-700 rounded-full p-4 transition-all hover:scale-110 border border-gray-200 shadow-lg"
-          aria-label="Feature guide"
-        >
-          <Info size={24} />
-        </button>
       </main>
+
+      {/* Add Task Button */}
+      <button
+        onClick={() => setIsTaskModalOpen(true)}
+        style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)' }}
+        className="fixed bottom-8 right-8 hover:brightness-110 text-white rounded-full p-4 transition-all hover:scale-110 focus:outline-none focus:ring-4 focus:ring-primary-300 shadow-lg"
+        aria-label="Add new resolution"
+      >
+        <Plus size={28} />
+      </button>
 
       {/* Modals */}
       {showSettings && currentUser && (
@@ -431,10 +507,6 @@ function App() {
           }}
           onClose={() => setSelectedTask(null)}
         />
-      )}
-
-      {showFeatureGuide && (
-        <FeatureGuide onClose={() => setShowFeatureGuide(false)} />
       )}
     </div>
   );
