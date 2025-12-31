@@ -55,19 +55,18 @@ export default function Header({
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🦆</span>
-              <span className="text-3xl">🐕</span>
+          <div className="flex items-center gap-3">
+            <img src="/assets/icon-removebg.png" alt="App Icon" className="w-20 h-20" />
+            <div>
               <h1 className="text-2xl font-bold text-gray-900">
                 This year we will...
               </h1>
+              {getGreeting() && (
+                <p className="text-gray-600 text-sm mt-1">
+                  {getGreeting()}
+                </p>
+              )}
             </div>
-            {getGreeting() && (
-              <p className="text-gray-600 text-sm mt-1">
-                {getGreeting()}
-              </p>
-            )}
           </div>
           
           <div className="flex items-center gap-6">

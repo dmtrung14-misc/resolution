@@ -349,12 +349,12 @@ function App() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="animate-spin mx-auto mb-4" style={{ color: '#3b82f6' }} size={48} />
+          <img 
+            src="/assets/icon-removebg.png" 
+            alt="Loading" 
+            className="w-24 h-24 mx-auto mb-4 animate-pulse"
+          />
           <p className="text-gray-600 text-lg">Loading your resolutions...</p>
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <span className="text-2xl">🐕</span>
-            <span className="text-2xl">🦆</span>
-          </div>
         </div>
       </div>
     );

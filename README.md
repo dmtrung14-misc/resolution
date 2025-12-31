@@ -1,171 +1,144 @@
-# Our 2025 Resolutions 🐕🦆
+# This Year We Will
 
-A beautiful, clean New Year resolution tracker built for couples (Doggo & Ducko!) to manage their goals together.
+![banner](assets/banner.png)
 
-## ✨ Features
+A New Year resolution tracker built for couples to share and track their goals together.
 
-- 🔐 **Secure Authentication** - Two accounts: Doggo 🐕 & Ducko 🦆 with password protection
-- 🎯 **Task Management** - Add resolutions with descriptions, assignees, deadlines, and urgency levels
-- 📊 **Progress Tracking** - Visual progress bars and rings for countable goals (e.g., "Read 50 books")
-- 💬 **Comment Threads** - Discuss, share recommendations, and upload photos for each resolution
-- 🎉 **Celebrations** - Fun confetti animations when completing tasks and reaching milestones
-- 👫 **Personalized** - Track who's working on what: Doggo 🐕, Ducko 🦆, or together
-- ✏️ **Custom Display Names** - Change your display name anytime for inside jokes!
-- ☁️ **Cloud Sync** - Real-time sync across all devices using Firebase
-- 📸 **Photo Storage** - Upload and share photos in Firebase Storage
-- 💾 **Browser Memory** - Stay logged in until you switch browsers or logout
+## Motivation
 
-## 🚀 Quick Start
+This app was created as a way for me and my girlfriend to keep track of our personal and shared goals throughout the year. We wanted something fun, personal, and easy to use where we could both see our progress, cheer each other on, and celebrate our wins together.
 
-### 1. Install Dependencies
+## Installation
 
-```bash
-npm install
-```
+### Prerequisites
 
-### 2. Set Up Firebase
+- Node.js (v16 or higher)
+- npm
+- A Firebase account
 
-**You need to set up Firebase to use this app!**
+### Setup Steps
 
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Create a new project
-3. Enable Firestore Database and Storage
-4. Get your Firebase config
-5. Copy `.env.example` to `.env` and fill in your Firebase credentials
+1. Clone the repository and install dependencies:
+   ```bash
+   npm install
+   ```
 
-📖 **See [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) for detailed step-by-step instructions!**
+2. Create a Firebase project:
+   - Go to [Firebase Console](https://console.firebase.google.com/)
+   - Create a new project
+   - Enable Firestore Database
+   - Enable Firebase Storage
+   - Set up Security Rules (see `FIREBASE_SETUP.md` for details)
 
-### 3. Run Development Server
+3. Configure environment variables:
+   - Create a `.env` file in the root directory
+   - Add your Firebase credentials:
+     ```
+     VITE_FIREBASE_API_KEY=your_api_key
+     VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
+     VITE_FIREBASE_PROJECT_ID=your_project_id
+     VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+     VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+     VITE_FIREBASE_APP_ID=your_app_id
+     VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+     ```
 
-```bash
-npm run dev
-```
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-Open your browser to the URL shown in the terminal (usually `http://localhost:5174`)
+5. Build for production:
+   ```bash
+   npm run build
+   ```
 
-### 4. Build for Production
+## Features
 
-```bash
-npm run build
-```
+### Authentication
+- [ ] Custom authentication system with two fixed accounts
+- [ ] Browser-based session memory
+- [ ] Password protection with SHA-256 hashing
+- [ ] Change display names and passwords
 
-## 📖 How to Use
+### Task Management
+- [ ] Create regular tasks or countable goals
+- [ ] Assign tasks to yourself, partner, or both
+- [ ] Set deadlines and urgency levels
+- [ ] Add tags for better organization
+- [ ] Add descriptions to tasks
+- [ ] Edit and delete tasks
 
-1. **Login** - Choose your persona (Doggo 🐕 or Ducko 🦆) and enter your password
-   - First time? Use default passwords: `ngongongo` (Doggo) or `dangdangdang` (Ducko)
-   - Change your password immediately in Settings!
-2. **Create Resolutions** - Click the + button to add a new resolution
-   - Choose between regular tasks or countable goals
-   - Set assignee (Doggo 🐕, Ducko 🦆, or Together 🐕🦆)
-   - Add deadline and urgency
-3. **Track Progress** - For countable goals, use the +/- buttons to update your count
-4. **Add Comments** - Click "View Details" on any task to add comments and photos
-5. **Settings** - Click ⚙️ to change display name, password, or logout
-6. **Celebrate** - Watch the confetti fly when you complete tasks or reach milestones!
+### Progress Tracking
+- [ ] Mark tasks as complete
+- [ ] Track progress for countable goals with increment/decrement buttons
+- [ ] Visual progress rings for countable goals
+- [ ] Subtasks for breaking down larger goals
+- [ ] Task completion tracking
 
-## 🎨 Design Features
+### Collaboration
+- [ ] Comment threads on tasks
+- [ ] Reply to comments
+- [ ] React to comments with emojis
+- [ ] Upload photos to comments
+- [ ] Share GIFs via Tenor integration
+- [ ] Full emoji picker support
 
-- Clean, Atlassian-inspired minimalist design
-- Warm orange/yellow color palette
-- Dog 🐕 and duck 🦆 themed throughout
-- Smooth animations and transitions
-- Responsive design for all devices
+### Filtering and Sorting
+- [ ] Filter by your tasks, partner's tasks, or shared tasks
+- [ ] Sort by name, priority, deadline, or latest activity
+- [ ] Toggle between grid and list view
 
-## 🔥 Firebase Features
+### Notifications
+- [ ] Get notified when partner comments on your task
+- [ ] Get notified when partner replies to your comment
+- [ ] Get notified when partner reacts to your comment
+- [ ] Get notified when partner completes a shared task
+- [ ] Get notified when partner creates a shared task
+- [ ] Get notified when partner adds subtasks to shared tasks
 
-### Firestore Database
-- Real-time sync across devices
-- Automatic save with debouncing
-- Persistent cloud storage
+### Celebrations
+- [ ] Custom animations when completing tasks
+- [ ] Seasonal emoji animations when creating tasks
+- [ ] Tag-based emoji celebrations
+- [ ] Fun duck and dog parade animations
 
-### Firebase Storage
-- Upload and store photos
-- Automatic compression
-- Secure image URLs
-- Max 5MB per image
+### Sharing
+- [ ] Copy shareable links to tasks
+- [ ] Deep linking to specific tasks
 
-### Sync Status
-- Visual indicator in header
-- "Syncing..." when saving
-- "Synced" when complete
+### Real-time Sync
+- [ ] Cloud-based storage with Firebase
+- [ ] Real-time synchronization across devices
+- [ ] Automatic save with visual sync status
+- [ ] Photo storage in Firebase Storage
 
-## 🛠️ Tech Stack
+### UI/UX
+- [ ] Clean blue-green gradient color scheme
+- [ ] Responsive design for all devices
+- [ ] Smooth animations and transitions
+- [ ] Custom scrollbar styling
+- [ ] Keyboard shortcuts
+- [ ] Dynamic seasonal emojis
 
-- **React 18** + TypeScript
-- **Tailwind CSS** for styling
-- **Vite** for fast development
-- **Firebase** (Firestore + Storage)
-- **Lucide Icons**
-- **Canvas Confetti** for celebrations
-- **date-fns** for date formatting
+## Tech Stack
 
-## 📱 Multi-Device Usage
+- React 18 with TypeScript
+- Vite
+- Tailwind CSS
+- Firebase (Firestore and Storage)
+- date-fns
+- emoji-picker-react
+- Tenor GIF API
+- Lucide icons
 
-Once Firebase is set up:
-- Open the app on any device
-- Both Doggo 🐕 and Ducko 🦆 can access from their own devices
-- Changes sync in real-time
-- Photos upload to cloud storage
-- No need to share one device!
+## Security Notes
 
-## 🔒 Security
-
-The app has built-in authentication:
-
-- ✅ **Two accounts only**: Doggo & Ducko
-- ✅ **Password protected**: Each account has its own password
-- ✅ **Hashed passwords**: SHA-256 encryption in Firebase
-- ✅ **Browser memory**: Stays logged in per browser
-- ✅ **Private data**: Only you two have access
-
-**Important:**
-1. **Change default passwords** immediately after first login
-2. **Keep your `.env` file private** - Never commit it to git
-3. **Don't share Firebase credentials** with others
-
-See [AUTHENTICATION.md](./AUTHENTICATION.md) for detailed security guide.
-
-## 📂 Project Structure
-
-```
-resolution/
-├── src/
-│   ├── components/        # React components
-│   ├── config/           # Firebase configuration
-│   ├── services/         # Firebase service layer
-│   ├── types.ts          # TypeScript types
-│   ├── utils/            # Utility functions
-│   └── App.tsx           # Main app component
-├── FIREBASE_SETUP.md     # Firebase setup guide
-└── .env                  # Firebase credentials (create this!)
-```
-
-## 🐛 Troubleshooting
-
-### App shows loading forever
-- Check your `.env` file has correct Firebase credentials
-- Verify Firestore and Storage are enabled in Firebase Console
-- Check browser console for errors
-
-### Photos not uploading
-- Ensure Firebase Storage is enabled
-- Check Storage rules allow uploads
-- Verify internet connection
-
-### Data not syncing
-- Check Firestore rules allow read/write
-- Verify internet connection
-- Look for errors in browser console
-
-## 💡 Future Ideas
-
-- 🔐 User authentication
-- 🔔 Push notifications
-- 📱 Progressive Web App
-- 🌙 Dark mode
-- 📊 Statistics dashboard
-- 🏆 Achievement system
+- Never commit your `.env` file
+- Change default passwords immediately after first login
+- Keep your Firebase credentials private
+- Review Firebase Security Rules before deploying
 
 ---
 
-Built with ❤️ for Doggo 🐕 & Ducko 🦆's 2025 journey together!
+🔥❤️ made with love by dmtrung14

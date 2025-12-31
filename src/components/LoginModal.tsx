@@ -55,6 +55,11 @@ export default function LoginModal({ onLogin }: LoginModalProps) {
           // User selection screen
           <div>
             <div className="text-center mb-8">
+              <img 
+                src="/assets/icon-removebg.png" 
+                alt="App Icon" 
+                className="w-32 h-32 mx-auto mb-4"
+              />
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back!</h2>
               <p className="text-gray-600">Who's here? Choose your persona</p>
             </div>
