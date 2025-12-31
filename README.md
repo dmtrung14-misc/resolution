@@ -1,6 +1,6 @@
 # This Year We Will
 
-![banner](assets/banner.png)
+![banner](public/assets/banner.png)
 
 A New Year resolution tracker built for couples to share and track their goals together.
 
