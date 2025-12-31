@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Task, AppState, UserRole } from './types';
+import { Task, AppState, UserRole, Notification } from './types';
 import { firebaseService } from './services/firebaseService';
 import { authService } from './services/authService';
 import { celebrateTaskCreation } from './utils/customCelebrations';
@@ -10,6 +10,7 @@ import TaskModal from './components/TaskModal';
 import TaskDetailModal from './components/TaskDetailModal';
 import LoginModal from './components/LoginModal';
 import SettingsModal from './components/SettingsModal';
+import NotificationPanel from './components/NotificationPanel';
 import { Plus, Loader2, LayoutGrid, List, ChevronDown } from 'lucide-react';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
     tasks: [],
     userName: '',
     partnerName: '',
+    notifications: [],
   });
 
   const [currentUser, setCurrentUser] = useState<UserRole | null>(null);
@@ -25,6 +27,7 @@ function App() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [filter, setFilter] = useState<'my' | 'partner' | 'together' | null>(null);
   const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'name' | 'priority' | 'deadline' | 'interaction'>('deadline');
@@ -157,6 +160,60 @@ function App() {
     }, 3000);
   };
 
+  // Create notification
+  const createNotification = (
+    type: Notification['type'],
+    taskId: string,
+    taskTitle: string,
+    message: string
+  ) => {
+    if (!currentUser) return;
+
+    const newNotification: Notification = {
+      id: Date.now().toString(),
+      type,
+      taskId,
+      taskTitle,
+      actorRole: currentUser,
+      message,
+      timestamp: new Date(),
+      read: false,
+    };
+
+    setState(prev => ({
+      ...prev,
+      notifications: [newNotification, ...(prev.notifications || [])],
+    }));
+  };
+
+  // Mark notification as read
+  const markNotificationAsRead = (notificationId: string) => {
+    setState(prev => ({
+      ...prev,
+      notifications: (prev.notifications || []).map(n =>
+        n.id === notificationId ? { ...n, read: true } : n
+      ),
+    }));
+  };
+
+  // Mark all notifications as read
+  const markAllNotificationsAsRead = () => {
+    setState(prev => ({
+      ...prev,
+      notifications: (prev.notifications || []).map(n => ({ ...n, read: true })),
+    }));
+  };
+
+  // Handle notification click
+  const handleNotificationClick = (taskId: string, notificationId: string) => {
+    const task = state.tasks.find(t => t.id === taskId);
+    if (task) {
+      setSelectedTask(task);
+      markNotificationAsRead(notificationId);
+      setShowNotifications(false);
+    }
+  };
+
   const addTask = (task: Omit<Task, 'id' | 'createdAt'>) => {
     const newTask: Task = {
       ...task,
@@ -170,6 +227,13 @@ function App() {
     
     // Celebrate task creation with tag-based or seasonal animation
     celebrateTaskCreation(new Date(task.deadline), task.tags);
+
+    // Create notification for mutual tasks
+    if (currentUser && newTask.assignee === 'together') {
+      const actorName = currentUser === 'doggo' ? state.userName : state.partnerName;
+      createNotification('task_created', newTask.id, newTask.title,
+        `${actorName} created a new task for us!`);
+    }
   };
 
   const updateTask = (id: string, updates: Partial<Task>) => {
@@ -274,6 +338,11 @@ function App() {
 
   const completedCount = state.tasks.filter(t => t.completed).length;
   const totalCount = state.tasks.length;
+  
+  // Get unread notifications for current user
+  const unreadNotifications = (state.notifications || []).filter(
+    n => !n.read && n.actorRole !== currentUser
+  ).length;
 
   // Loading state
   if (isLoading) {
@@ -303,7 +372,17 @@ function App() {
         totalCount={totalCount}
         currentUser={currentUser}
         filter={filter}
+        unreadNotifications={unreadNotifications}
+        showNotifications={showNotifications}
+        notifications={(state.notifications || []).filter(n => n.actorRole !== currentUser)}
+        userName={state.userName}
+        partnerName={state.partnerName}
         onOpenSettings={() => setShowSettings(true)}
+        onOpenNotifications={() => setShowNotifications(!showNotifications)}
+        onCloseNotifications={() => setShowNotifications(false)}
+        onMarkAsRead={markNotificationAsRead}
+        onMarkAllAsRead={markAllNotificationsAsRead}
+        onNotificationClick={handleNotificationClick}
         isSaving={isSaving}
       />
 
@@ -533,6 +612,7 @@ function App() {
             setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
           }}
           onClose={() => setSelectedTask(null)}
+          onCreateNotification={createNotification}
         />
       )}
 
@@ -555,6 +635,7 @@ function App() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

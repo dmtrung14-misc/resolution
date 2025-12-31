@@ -27,6 +27,25 @@ export interface SubTask {
   createdAt: Date;
 }
 
+export type NotificationType = 
+  | 'comment_reply'
+  | 'comment_reaction'
+  | 'task_comment'
+  | 'task_completed'
+  | 'task_created'
+  | 'task_edited';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  taskId: string;
+  taskTitle: string;
+  actorRole: UserRole; // Who did the action (doggo or ducko)
+  message: string;
+  timestamp: Date;
+  read: boolean;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -61,6 +80,7 @@ export interface AppState {
   tasks: Task[];
   userName: string;
   partnerName: string;
+  notifications?: Notification[];
 }
 
 export interface AuthState {

@@ -165,10 +165,17 @@ export const firebaseService = {
           nanoseconds: data.tasks?.[0]?.deadline?.nanoseconds,
         });
         
+        // Convert notification timestamps
+        const notifications = (data.notifications || []).map((notif: any) => ({
+          ...notif,
+          timestamp: notif.timestamp?.toDate?.() || new Date(notif.timestamp),
+        }));
+        
         const loadedState = {
           userName: data.userName || '',
           partnerName: data.partnerName || '',
           tasks: (data.tasks || []).map(convertTimestamps),
+          notifications,
         };
         
         console.log('Loaded state from Firebase:', {
@@ -197,10 +204,20 @@ export const firebaseService = {
   async saveState(state: AppState): Promise<void> {
     try {
       const docRef = doc(db, COLLECTION_NAME, STATE_DOC_ID);
+      
+      // Convert notification timestamps
+      const notifications = (state.notifications || []).map((notif) => ({
+        ...notif,
+        timestamp: notif.timestamp instanceof Date 
+          ? Timestamp.fromDate(notif.timestamp)
+          : notif.timestamp,
+      }));
+      
       const dataToSave = {
         userName: state.userName,
         partnerName: state.partnerName,
         tasks: state.tasks.map(convertToTimestamps),
+        notifications: removeUndefined(notifications),
         updatedAt: Timestamp.now(),
       };
       

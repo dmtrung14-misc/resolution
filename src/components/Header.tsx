@@ -1,16 +1,44 @@
-import { Settings, Cloud } from 'lucide-react';
+import { Settings, Cloud, Bell } from 'lucide-react';
 import { UserRole } from '../types';
+import NotificationPanel from './NotificationPanel';
 
 interface HeaderProps {
   completedCount: number;
   totalCount: number;
   currentUser: UserRole | null;
   filter: 'my' | 'partner' | 'together' | null;
+  unreadNotifications: number;
+  showNotifications: boolean;
+  notifications: any[];
+  userName: string;
+  partnerName: string;
   onOpenSettings: () => void;
+  onOpenNotifications: () => void;
+  onCloseNotifications: () => void;
+  onMarkAsRead: (id: string) => void;
+  onMarkAllAsRead: () => void;
+  onNotificationClick: (taskId: string, notificationId: string) => void;
   isSaving?: boolean;
 }
 
-export default function Header({ completedCount, totalCount, currentUser, filter, onOpenSettings, isSaving }: HeaderProps) {
+export default function Header({ 
+  completedCount, 
+  totalCount, 
+  currentUser, 
+  filter, 
+  unreadNotifications, 
+  showNotifications,
+  notifications,
+  userName,
+  partnerName,
+  onOpenSettings, 
+  onOpenNotifications,
+  onCloseNotifications,
+  onMarkAsRead,
+  onMarkAllAsRead,
+  onNotificationClick,
+  isSaving 
+}: HeaderProps) {
   const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   
   // Get Vietnamese greeting based on persona
@@ -74,6 +102,37 @@ export default function Header({ completedCount, totalCount, currentUser, filter
               </div>
             </div>
             
+            <div className="relative">
+              <button
+                onClick={onOpenNotifications}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors relative"
+                aria-label="Notifications"
+              >
+                <Bell size={20} />
+                {unreadNotifications > 0 && (
+                  <span 
+                    className="absolute -top-1 -right-1 w-5 h-5 text-white text-xs font-bold rounded-full flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)' }}
+                  >
+                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && currentUser && (
+                <NotificationPanel
+                  notifications={notifications}
+                  currentUser={currentUser}
+                  userName={userName}
+                  partnerName={partnerName}
+                  onClose={onCloseNotifications}
+                  onMarkAsRead={onMarkAsRead}
+                  onMarkAllAsRead={onMarkAllAsRead}
+                  onNotificationClick={onNotificationClick}
+                />
+              )}
+            </div>
+
             <button
               onClick={onOpenSettings}
               className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"

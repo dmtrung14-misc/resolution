@@ -16,9 +16,10 @@ interface TaskDetailModalProps {
   currentUser: UserRole;
   onUpdate: (updates: Partial<Task>) => void;
   onClose: () => void;
+  onCreateNotification?: (type: string, taskId: string, taskTitle: string, message: string) => void;
 }
 
-export default function TaskDetailModal({ task, userName, partnerName, currentUser, onUpdate, onClose }: TaskDetailModalProps) {
+export default function TaskDetailModal({ task, userName, partnerName, currentUser, onUpdate, onClose, onCreateNotification }: TaskDetailModalProps) {
   const [commentText, setCommentText] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [gifUrl, setGifUrl] = useState('');
@@ -103,6 +104,33 @@ export default function TaskDetailModal({ task, userName, partnerName, currentUs
           comments: updatedComments,
         });
 
+        // Create notification
+        if (onCreateNotification) {
+          const partnerName = currentUser === 'doggo' ? userName : partnerName;
+          if (replyingTo) {
+            // Find if replying to partner's comment
+            const findComment = (comments: Comment[]): Comment | null => {
+              for (const comment of comments) {
+                if (comment.id === replyingTo) return comment;
+                if (comment.replies) {
+                  const found = findComment(comment.replies);
+                  if (found) return found;
+                }
+              }
+              return null;
+            };
+            const parentComment = findComment(task.comments);
+            if (parentComment && parentComment.author !== commentAuthor) {
+              onCreateNotification('comment_reply', task.id, task.title, 
+                `${currentUser === 'doggo' ? userName : partnerName} replied to your comment`);
+            }
+          } else if (task.assignee === 'together' || task.assignee !== (currentUser === 'doggo' ? 'me' : 'her')) {
+            // Notify partner about comment on their task or mutual task
+            onCreateNotification('task_comment', task.id, task.title,
+              `${currentUser === 'doggo' ? userName : partnerName} commented on this task`);
+          }
+        }
+
         setCommentText('');
         setPhotos([]);
         setGifUrl('');
@@ -137,6 +165,9 @@ export default function TaskDetailModal({ task, userName, partnerName, currentUs
   };
 
   const toggleReaction = (commentId: string, emoji: string, isReply: boolean = false, parentId?: string) => {
+    let shouldNotify = false;
+    let commentAuthorToNotify: 'me' | 'her' | null = null;
+
     const toggleReactionInComments = (comments: Comment[]): Comment[] => {
       return comments.map(comment => {
         if (comment.id === commentId) {
@@ -159,14 +190,22 @@ export default function TaskDetailModal({ task, userName, partnerName, currentUs
                 );
               }
             } else {
-              // Add user to reaction
+              // Add user to reaction - trigger notification
               newReactions = reactions.map(r => 
                 r.emoji === emoji ? { ...r, users: [...r.users, commentAuthor] } : r
               );
+              if (comment.author !== commentAuthor) {
+                shouldNotify = true;
+                commentAuthorToNotify = comment.author;
+              }
             }
           } else {
-            // Create new reaction
+            // Create new reaction - trigger notification
             newReactions = [...reactions, { emoji, users: [commentAuthor] }];
+            if (comment.author !== commentAuthor) {
+              shouldNotify = true;
+              commentAuthorToNotify = comment.author;
+            }
           }
           
           return { ...comment, reactions: newReactions };
@@ -186,6 +225,13 @@ export default function TaskDetailModal({ task, userName, partnerName, currentUs
 
     const updatedComments = toggleReactionInComments(task.comments);
     onUpdate({ comments: updatedComments });
+
+    // Trigger notification if reacting to partner's comment
+    if (shouldNotify && onCreateNotification && commentAuthorToNotify) {
+      const actorName = currentUser === 'doggo' ? userName : partnerName;
+      onCreateNotification('comment_reaction', task.id, task.title,
+        `${actorName} reacted ${emoji} to your comment`);
+    }
   };
 
   const onEmojiClick = (emojiData: EmojiClickData) => {
@@ -231,6 +277,14 @@ export default function TaskDetailModal({ task, userName, partnerName, currentUs
 
     const updatedSubtasks = [...(task.subtasks || []), newSubtask];
     onUpdate({ subtasks: updatedSubtasks });
+    
+    // Create notification for mutual tasks
+    if (onCreateNotification && task.assignee === 'together') {
+      const actorName = currentUser === 'doggo' ? userName : partnerName;
+      onCreateNotification('task_edited', task.id, task.title,
+        `${actorName} added a subtask: "${newSubtask.title}"`);
+    }
+    
     setNewSubtaskTitle('');
   };
 
@@ -275,6 +329,13 @@ export default function TaskDetailModal({ task, userName, partnerName, currentUs
   const handleToggleComplete = () => {
     if (!task.completed) {
       celebrateTaskCompletion(currentUser);
+      
+      // Create notification for mutual tasks when completing
+      if (onCreateNotification && task.assignee === 'together') {
+        const actorName = currentUser === 'doggo' ? userName : partnerName;
+        onCreateNotification('task_completed', task.id, task.title,
+          `${actorName} completed this task! 🎉`);
+      }
     }
     onUpdate({ completed: !task.completed });
   };
