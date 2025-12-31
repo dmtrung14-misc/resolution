@@ -13,6 +13,25 @@ import SettingsModal from './components/SettingsModal';
 import NotificationPanel from './components/NotificationPanel';
 import { Plus, Loader2, LayoutGrid, List, ChevronDown } from 'lucide-react';
 
+// Motivational quotes for loading screen
+const motivationalQuotes = [
+  "Great things never come from comfort zones.",
+  "The best time to plant a tree was 20 years ago. The second best time is now.",
+  "Together we can do so much.",
+  "Small steps every day lead to big changes.",
+  "Your only limit is you.",
+  "Dream big, start small, act now.",
+  "Success is the sum of small efforts repeated day in and day out.",
+  "The future depends on what you do today.",
+  "Believe you can and you're halfway there.",
+  "Every accomplishment starts with the decision to try.",
+  "Progress, not perfection.",
+  "Two hearts, one goal.",
+  "Love grows when we grow together.",
+  "The best project you'll ever work on is you.",
+  "Make today count.",
+];
+
 function App() {
   const [state, setState] = useState<AppState>({
     tasks: [],
@@ -35,6 +54,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showCopyNotification, setShowCopyNotification] = useState(false);
+  const [loadingQuote] = useState(() => 
+    motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]
+  );
 
   // Initialize authentication on mount
   useEffect(() => {
@@ -347,14 +369,17 @@ function App() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
           <img 
             src="/assets/icon-removebg.png" 
             alt="Loading" 
-            className="w-24 h-24 mx-auto mb-4 animate-pulse"
+            className="w-24 h-24 mx-auto mb-6 animate-pulse"
           />
-          <p className="text-gray-600 text-lg">Loading your resolutions...</p>
+          <p className="text-gray-700 text-lg font-medium italic mb-2">
+            "{loadingQuote}"
+          </p>
+          <p className="text-gray-500 text-sm">Loading your resolutions...</p>
         </div>
       </div>
     );
