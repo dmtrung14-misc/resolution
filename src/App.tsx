@@ -11,7 +11,7 @@ import TaskDetailModal from './components/TaskDetailModal';
 import LoginModal from './components/LoginModal';
 import SettingsModal from './components/SettingsModal';
 import NotificationPanel from './components/NotificationPanel';
-import { Plus, Loader2, LayoutGrid, List, ChevronDown } from 'lucide-react';
+import { Plus, Loader2, LayoutGrid, List, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 // Motivational quotes for loading screen
 const motivationalQuotes = [
@@ -48,8 +48,9 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [filter, setFilter] = useState<'my' | 'partner' | 'together' | null>(null);
-  const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('grid');
+  const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('list');
   const [sortBy, setSortBy] = useState<'name' | 'priority' | 'deadline' | 'interaction'>('deadline');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -70,8 +71,9 @@ function App() {
         
         if (storedUser) {
           setCurrentUser(storedUser);
-          setIsAuthenticated(true);
+          // Load data BEFORE setting authenticated to prevent race condition with save effect
           await loadAppData();
+          setIsAuthenticated(true);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -133,6 +135,12 @@ function App() {
     console.log('State changed, scheduling save. Task count:', state.tasks.length);
     
     const saveData = async () => {
+      // Safety check: Don't save if state looks invalid or empty during initialization
+      if (!state.userName && !state.partnerName && state.tasks.length === 0) {
+        console.log('Skipping save: state appears to be initializing');
+        return;
+      }
+      
       setIsSaving(true);
       console.log('Saving state to Firebase...');
       try {
@@ -156,8 +164,9 @@ function App() {
     
     if (success) {
       setCurrentUser(username);
-      setIsAuthenticated(true);
+      // Load data BEFORE setting authenticated to prevent race condition with save effect
       await loadAppData();
+      setIsAuthenticated(true);
     }
     
     return success;
@@ -172,6 +181,7 @@ function App() {
       tasks: [],
       userName: '',
       partnerName: '',
+      notifications: [],
     });
   };
 
@@ -296,8 +306,8 @@ function App() {
   };
 
   // Determine assignee values based on current user
-  const myAssignee: Assignee = 'me';
-  const partnerAssignee: Assignee = 'her';
+  const myAssignee: Assignee = currentUser === 'doggo' ? 'me' : 'her';
+  const partnerAssignee: Assignee = currentUser === 'doggo' ? 'her' : 'me';
   
   // Helper function to get latest interaction time
   const getLatestInteraction = (task: Task): Date => {
@@ -332,21 +342,37 @@ function App() {
 
   // Sort tasks based on selected sort option
   const sortedTasks = [...filteredTasks].sort((a, b) => {
+    // Always put completed tasks at the bottom
+    if (a.completed && !b.completed) return 1;
+    if (!a.completed && b.completed) return -1;
+    
+    // Apply sort logic within completed/incomplete groups
+    let comparison = 0;
     switch (sortBy) {
       case 'name':
-        return a.title.localeCompare(b.title);
+        comparison = a.title.localeCompare(b.title);
+        break;
       case 'priority':
         // Sort by urgency (high first), then by deadline
         const urgencyDiff = getUrgencyValue(b.urgency) - getUrgencyValue(a.urgency);
-        if (urgencyDiff !== 0) return urgencyDiff;
-        return a.deadline.getTime() - b.deadline.getTime();
+        if (urgencyDiff !== 0) {
+          comparison = urgencyDiff;
+        } else {
+          comparison = a.deadline.getTime() - b.deadline.getTime();
+        }
+        break;
       case 'deadline':
-        return a.deadline.getTime() - b.deadline.getTime();
+        comparison = a.deadline.getTime() - b.deadline.getTime();
+        break;
       case 'interaction':
-        return getLatestInteraction(b).getTime() - getLatestInteraction(a).getTime();
+        comparison = getLatestInteraction(b).getTime() - getLatestInteraction(a).getTime();
+        break;
       default:
-        return 0;
+        comparison = 0;
     }
+    
+    // Apply sort direction
+    return sortDirection === 'asc' ? comparison : -comparison;
   });
   
   // Vietnamese greeting message based on current user
@@ -496,6 +522,19 @@ function App() {
                 </>
               )}
             </div>
+
+            {/* Sort Direction Toggle */}
+            <button
+              onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+              className="flex items-center justify-center bg-white border border-gray-200 rounded-lg p-2 hover:border-blue-300 transition-colors shadow-sm"
+              title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              {sortDirection === 'asc' ? (
+                <ArrowUp size={18} className="text-blue-500" />
+              ) : (
+                <ArrowDown size={18} className="text-blue-500" />
+              )}
+            </button>
 
             {/* Display Mode Toggle */}
             <div className="flex gap-1 bg-white rounded-lg border border-gray-200 p-1">

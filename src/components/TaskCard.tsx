@@ -66,12 +66,12 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
 
   return (
     <div 
-      className={`bg-white rounded-lg border transition-all hover:border-primary-300 cursor-pointer ${
+      className={`bg-white rounded-lg border transition-all hover:border-primary-300 cursor-pointer flex flex-col ${
         task.completed ? 'border-green-300 opacity-90' : isOverdue ? 'border-red-300' : 'border-gray-200'
       }`}
       onClick={onViewDetails}
     >
-      <div className="p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="p-5 flex-1 min-h-[280px] flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 cursor-pointer" onClick={onViewDetails}>
@@ -118,36 +118,38 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
           )}
         </div>
 
-        {/* Description */}
-        <p className="text-gray-600 text-sm mb-4 line-clamp-2 cursor-pointer" onClick={onViewDetails}>
-          {task.description}
-        </p>
+        {/* Description and Progress - takes available space */}
+        <div className="flex-1 flex flex-col">
+          <p className="text-gray-600 text-sm mb-4 line-clamp-2 cursor-pointer" onClick={onViewDetails}>
+            {task.description}
+          </p>
 
-        {/* Countable Progress */}
-        {task.type === 'countable' && task.targetCount && (
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                {task.currentCount || 0} / {task.targetCount} {task.countLabel || 'items'}
-              </span>
-              <span className="text-sm font-bold" style={{ color: '#10b981' }}>
-                {Math.round(progress)}%
-              </span>
+          {/* Countable Progress */}
+          {task.type === 'countable' && task.targetCount && (
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">
+                  {task.currentCount || 0} / {task.targetCount} {task.countLabel || 'items'}
+                </span>
+                <span className="text-sm font-bold" style={{ color: '#10b981' }}>
+                  {Math.round(progress)}%
+                </span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full transition-all duration-500 rounded-full"
+                  style={{ 
+                    width: `${Math.min(progress, 100)}%`,
+                    background: 'linear-gradient(to right, #3b82f6, #10b981)'
+                  }}
+                />
+              </div>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full transition-all duration-500 rounded-full"
-                style={{ 
-                  width: `${Math.min(progress, 100)}%`,
-                  background: 'linear-gradient(to right, #3b82f6, #10b981)'
-                }}
-              />
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+        {/* Footer - always at bottom */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
           <div className="flex items-center gap-3 text-sm">
             <div className={`flex items-center gap-1 ${getUrgencyColor(task.urgency)}`}>
               <AlertCircle size={14} />
@@ -230,7 +232,7 @@ export default function TaskCard({ task, userName, partnerName, currentUser, onU
           e.stopPropagation();
           onViewDetails();
         }}
-        className="w-full py-2.5 text-sm font-medium transition-all border-t border-gray-100 hover:bg-gray-50"
+        className="w-full py-3 text-sm font-medium transition-all border-t border-gray-100 hover:bg-gray-50 flex-shrink-0"
         style={{
           background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)',
           WebkitBackgroundClip: 'text',

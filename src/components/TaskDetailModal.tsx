@@ -32,7 +32,7 @@ export default function TaskDetailModal({ task, userName, partnerName, currentUs
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Automatically use current user as comment author
-  const commentAuthor: 'me' | 'her' = 'me';
+  const commentAuthor: 'me' | 'her' = currentUser === 'doggo' ? 'me' : 'her';
 
   // Handle Escape key to close
   useEffect(() => {
@@ -106,7 +106,7 @@ export default function TaskDetailModal({ task, userName, partnerName, currentUs
 
         // Create notification
         if (onCreateNotification) {
-          const partnerName = currentUser === 'doggo' ? userName : partnerName;
+          const actorName = currentUser === 'doggo' ? userName : partnerName;
           if (replyingTo) {
             // Find if replying to partner's comment
             const findComment = (comments: Comment[]): Comment | null => {
@@ -122,12 +122,12 @@ export default function TaskDetailModal({ task, userName, partnerName, currentUs
             const parentComment = findComment(task.comments);
             if (parentComment && parentComment.author !== commentAuthor) {
               onCreateNotification('comment_reply', task.id, task.title, 
-                `${currentUser === 'doggo' ? userName : partnerName} replied to your comment`);
+                `${actorName} replied to your comment`);
             }
           } else if (task.assignee === 'together' || task.assignee !== (currentUser === 'doggo' ? 'me' : 'her')) {
             // Notify partner about comment on their task or mutual task
             onCreateNotification('task_comment', task.id, task.title,
-              `${currentUser === 'doggo' ? userName : partnerName} commented on this task`);
+              `${actorName} commented on this task`);
           }
         }
 

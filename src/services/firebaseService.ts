@@ -203,6 +203,12 @@ export const firebaseService = {
   // Save app state
   async saveState(state: AppState): Promise<void> {
     try {
+      // Safety check: Don't save if state is invalid
+      if (!state.userName && !state.partnerName && state.tasks.length === 0) {
+        console.warn('Refusing to save empty state to Firebase');
+        return;
+      }
+      
       const docRef = doc(db, COLLECTION_NAME, STATE_DOC_ID);
       
       // Convert notification timestamps
@@ -223,6 +229,8 @@ export const firebaseService = {
       
       console.log('Saving state to Firebase:', {
         taskCount: dataToSave.tasks.length,
+        userName: dataToSave.userName,
+        partnerName: dataToSave.partnerName,
         tasks: dataToSave.tasks.map((t: any) => ({
           id: t.id,
           title: t.title,
