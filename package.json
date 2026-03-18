@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "migrate:copy:2026": "node scripts/migrate-2026-copy.mjs",
+    "migrate:copy:notifications:root": "node scripts/copy-notifications-to-root.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.2",

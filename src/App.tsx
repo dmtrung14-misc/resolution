@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Task, AppState, UserRole, Notification } from './types';
+import { Task, AppState, UserRole, Notification, Assignee, Urgency } from './types';
 import { firebaseService } from './services/firebaseService';
 import { authService } from './services/authService';
 import { celebrateTaskCreation } from './utils/customCelebrations';
@@ -10,8 +10,7 @@ import TaskModal from './components/TaskModal';
 import TaskDetailModal from './components/TaskDetailModal';
 import LoginModal from './components/LoginModal';
 import SettingsModal from './components/SettingsModal';
-import NotificationPanel from './components/NotificationPanel';
-import { Plus, Loader2, LayoutGrid, List, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, LayoutGrid, List, ChevronDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 // Motivational quotes for loading screen
 const motivationalQuotes = [
@@ -31,6 +30,8 @@ const motivationalQuotes = [
   "The best project you'll ever work on is you.",
   "Make today count.",
 ];
+
+const AVAILABLE_YEARS = ['2026'] as const;
 
 function App() {
   const [state, setState] = useState<AppState>({
@@ -52,12 +53,16 @@ function App() {
   const [sortBy, setSortBy] = useState<'name' | 'priority' | 'deadline' | 'interaction'>('deadline');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [pendingWrites, setPendingWrites] = useState(0);
   const [showCopyNotification, setShowCopyNotification] = useState(false);
+  const [taskPendingDelete, setTaskPendingDelete] = useState<Task | null>(null);
+  const [selectedYear, setSelectedYear] = useState<string>(AVAILABLE_YEARS[0]);
   const [loadingQuote] = useState(() => 
     motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]
   );
+  const isSaving = pendingWrites > 0;
 
   // Initialize authentication on mount
   useEffect(() => {
@@ -103,10 +108,10 @@ function App() {
   }, [isLoading, isAuthenticated, state.tasks]);
 
   // Load app data (tasks and display names)
-  const loadAppData = async () => {
+  const loadAppData = async (year: string = selectedYear) => {
     try {
       const [loaded, displayNames] = await Promise.all([
-        firebaseService.loadState(),
+        firebaseService.loadState(year),
         authService.getDisplayNames(),
       ]);
       
@@ -128,35 +133,16 @@ function App() {
     }
   };
 
-  // Save state to Firebase whenever it changes
-  useEffect(() => {
-    if (isLoading || !isAuthenticated) return; // Don't save during initial load or if not authenticated
-    
-    console.log('State changed, scheduling save. Task count:', state.tasks.length);
-    
-    const saveData = async () => {
-      // Safety check: Don't save if state looks invalid or empty during initialization
-      if (!state.userName && !state.partnerName && state.tasks.length === 0) {
-        console.log('Skipping save: state appears to be initializing');
-        return;
-      }
-      
-      setIsSaving(true);
-      console.log('Saving state to Firebase...');
-      try {
-        await firebaseService.saveState(state);
-        console.log('Save completed');
-      } catch (error) {
-        console.error('Error saving to Firebase:', error);
-      } finally {
-        setIsSaving(false);
-      }
-    };
-    
-    // Debounce saves
-    const timeoutId = setTimeout(saveData, 500);
-    return () => clearTimeout(timeoutId);
-  }, [state, isLoading, isAuthenticated]);
+  const runWrite = async (operationName: string, action: () => Promise<void>) => {
+    setPendingWrites((prev) => prev + 1);
+    try {
+      await action();
+    } catch (error) {
+      console.error(`Error during ${operationName}:`, error);
+    } finally {
+      setPendingWrites((prev) => Math.max(0, prev - 1));
+    }
+  };
 
   // Handle login
   const handleLogin = async (username: UserRole, password: string): Promise<boolean> => {
@@ -216,24 +202,44 @@ function App() {
       ...prev,
       notifications: [newNotification, ...(prev.notifications || [])],
     }));
+
+    void runWrite('notification create', () =>
+      firebaseService.upsertNotification(newNotification)
+    );
   };
 
   // Mark notification as read
   const markNotificationAsRead = (notificationId: string) => {
+    let updatedNotification: Notification | null = null;
     setState(prev => ({
       ...prev,
       notifications: (prev.notifications || []).map(n =>
-        n.id === notificationId ? { ...n, read: true } : n
+        n.id === notificationId
+          ? (updatedNotification = { ...n, read: true })
+          : n
       ),
     }));
+
+    if (updatedNotification) {
+      void runWrite('notification mark as read', () =>
+        firebaseService.upsertNotification(updatedNotification as Notification)
+      );
+    }
   };
 
   // Mark all notifications as read
   const markAllNotificationsAsRead = () => {
+    let updatedNotifications: Notification[] = [];
     setState(prev => ({
       ...prev,
-      notifications: (prev.notifications || []).map(n => ({ ...n, read: true })),
+      notifications: (updatedNotifications = (prev.notifications || []).map(n => ({ ...n, read: true }))),
     }));
+
+    if (updatedNotifications.length > 0) {
+      void runWrite('notification mark all as read', () =>
+        firebaseService.upsertNotifications(updatedNotifications)
+      );
+    }
   };
 
   // Handle notification click
@@ -256,6 +262,7 @@ function App() {
       ...prev,
       tasks: [...prev.tasks, newTask],
     }));
+    void runWrite('task create', () => firebaseService.upsertTask(newTask, selectedYear));
     
     // Celebrate task creation with tag-based or seasonal animation
     celebrateTaskCreation(new Date(task.deadline), task.tags);
@@ -270,9 +277,10 @@ function App() {
 
   const updateTask = (id: string, updates: Partial<Task>) => {
     console.log('updateTask called:', { id, updates });
+    let updatedTask: Task | null = null;
     setState(prev => {
       const updatedTasks = prev.tasks.map(task => 
-        task.id === id ? { ...task, ...updates } : task
+        task.id === id ? (updatedTask = { ...task, ...updates }) : task
       );
       console.log('Updated tasks:', updatedTasks.find(t => t.id === id));
       return {
@@ -280,6 +288,10 @@ function App() {
         tasks: updatedTasks,
       };
     });
+
+    if (updatedTask) {
+      void runWrite('task update', () => firebaseService.upsertTask(updatedTask as Task, selectedYear));
+    }
   };
 
   const deleteTask = (id: string) => {
@@ -287,6 +299,24 @@ function App() {
       ...prev,
       tasks: prev.tasks.filter(task => task.id !== id),
     }));
+    if (selectedTask?.id === id) {
+      setSelectedTask(null);
+    }
+    void runWrite('task delete', () => firebaseService.deleteTask(id, selectedYear));
+  };
+
+  const requestDeleteTask = (task: Task) => {
+    setTaskPendingDelete(task);
+  };
+
+  const confirmDeleteTask = () => {
+    if (!taskPendingDelete) return;
+    deleteTask(taskPendingDelete.id);
+    setTaskPendingDelete(null);
+  };
+
+  const cancelDeleteTask = () => {
+    setTaskPendingDelete(null);
   };
 
   const handleEditTask = (task: Task) => {
@@ -303,6 +333,17 @@ function App() {
     setShowSettings(false);
     // Reload display names in case they changed
     await loadAppData();
+  };
+
+  const handleYearChange = async (year: string) => {
+    if (year === selectedYear) return;
+    setSelectedYear(year);
+    setSelectedTask(null);
+    setEditingTask(null);
+    setIsTaskModalOpen(false);
+    if (isAuthenticated) {
+      await loadAppData(year);
+    }
   };
 
   // Determine assignee values based on current user
@@ -536,6 +577,48 @@ function App() {
               )}
             </button>
 
+            {/* Year Selector */}
+            <div className="relative">
+              <button
+                onClick={() => setShowYearDropdown(!showYearDropdown)}
+                className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-4 py-2 hover:border-blue-300 transition-colors shadow-sm"
+              >
+                <span className="text-sm text-gray-500 whitespace-nowrap">Year</span>
+                <span className="text-sm font-medium text-gray-900">{selectedYear}</span>
+                <ChevronDown
+                  size={16}
+                  className={`text-blue-500 transition-transform ${showYearDropdown ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {showYearDropdown && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowYearDropdown(false)}
+                  />
+                  <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden min-w-[120px]">
+                    {AVAILABLE_YEARS.map((year) => (
+                      <button
+                        key={year}
+                        onClick={() => {
+                          void handleYearChange(year);
+                          setShowYearDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                          selectedYear === year
+                            ? 'bg-gray-200 text-gray-900 font-medium'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {year}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
             {/* Display Mode Toggle */}
             <div className="flex gap-1 bg-white rounded-lg border border-gray-200 p-1">
               <button
@@ -602,7 +685,7 @@ function App() {
                 partnerName={state.partnerName}
                 currentUser={currentUser!}
                 onUpdate={(updates) => updateTask(task.id, updates)}
-                onDelete={() => deleteTask(task.id)}
+                onDelete={() => requestDeleteTask(task)}
                 onEdit={() => handleEditTask(task)}
                 onViewDetails={() => setSelectedTask(task)}
                 onCopyLink={handleShowCopyNotification}
@@ -619,7 +702,7 @@ function App() {
                 partnerName={state.partnerName}
                 currentUser={currentUser!}
                 onUpdate={(updates) => updateTask(task.id, updates)}
-                onDelete={() => deleteTask(task.id)}
+                onDelete={() => requestDeleteTask(task)}
                 onEdit={() => handleEditTask(task)}
                 onViewDetails={() => setSelectedTask(task)}
                 onCopyLink={handleShowCopyNotification}
@@ -695,6 +778,36 @@ function App() {
             <div>
               <p className="font-semibold text-gray-900">Link copied!</p>
               <p className="text-sm text-gray-600">Share it with your partner 💕</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {taskPendingDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={cancelDeleteTask}
+          />
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-md p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete resolution?</h3>
+            <p className="text-gray-900 mb-6">
+              Bbi có chắc chắn muốn xóa <span className="font-semibold">{taskPendingDelete.title}</span> không?
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={cancelDeleteTask}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteTask}
+                className="px-4 py-2 rounded-lg text-white bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>

@@ -4,10 +4,8 @@ import {
   getDocs, 
   getDoc,
   setDoc, 
-  updateDoc, 
   deleteDoc,
-  query,
-  orderBy,
+  writeBatch,
   Timestamp 
 } from 'firebase/firestore';
 import { 
@@ -17,10 +15,17 @@ import {
   deleteObject 
 } from 'firebase/storage';
 import { db, storage } from '../config/firebase';
-import { Task, AppState, Comment } from '../types';
+import { AppState, Task, Notification } from '../types';
 
-const COLLECTION_NAME = 'resolutions';
-const STATE_DOC_ID = 'appState';
+const RESOLUTIONS_COLLECTION = 'resolutions';
+const DEFAULT_YEAR = '2026';
+const TASKS_SUBCOLLECTION = 'tasks';
+const NOTIFICATIONS_COLLECTION = 'notifications';
+
+const getTasksCollectionRef = (year: string = DEFAULT_YEAR) =>
+  collection(db, `${RESOLUTIONS_COLLECTION}/${year}/${TASKS_SUBCOLLECTION}`);
+
+const getNotificationsCollectionRef = () => collection(db, NOTIFICATIONS_COLLECTION);
 
 // Recursively convert comment timestamps
 const convertCommentTimestamps = (comment: any): any => {
@@ -148,51 +153,72 @@ const convertToTimestamps = (data: any): any => {
 
 export const firebaseService = {
   // Load app state (names and tasks)
-  async loadState(): Promise<AppState | null> {
+  async loadState(year: string = DEFAULT_YEAR): Promise<AppState | null> {
     try {
-      const docRef = doc(db, COLLECTION_NAME, STATE_DOC_ID);
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        
-        console.log('Raw data from Firebase (first task):', data.tasks?.[0]);
-        console.log('Raw deadline:', data.tasks?.[0]?.deadline);
-        console.log('Deadline structure:', {
-          value: data.tasks?.[0]?.deadline,
-          hasToDate: typeof data.tasks?.[0]?.deadline?.toDate,
-          seconds: data.tasks?.[0]?.deadline?.seconds,
-          nanoseconds: data.tasks?.[0]?.deadline?.nanoseconds,
-        });
-        
-        // Convert notification timestamps
-        const notifications = (data.notifications || []).map((notif: any) => ({
+      const yearDocRef = doc(db, RESOLUTIONS_COLLECTION, year);
+      const tasksCollectionRef = collection(
+        db,
+        `${RESOLUTIONS_COLLECTION}/${year}/${TASKS_SUBCOLLECTION}`
+      );
+      const notificationsCollectionRef = collection(db, NOTIFICATIONS_COLLECTION);
+
+      const [yearDocSnap, tasksSnap, notificationsSnap] = await Promise.all([
+        getDoc(yearDocRef),
+        getDocs(tasksCollectionRef),
+        getDocs(notificationsCollectionRef),
+      ]);
+
+      const loadedTasks = tasksSnap.docs.map((taskDoc) =>
+        convertTimestamps({
+          id: taskDoc.id,
+          ...taskDoc.data(),
+        })
+      );
+
+      const loadedNotifications = notificationsSnap.docs
+        .map((notificationDoc) => ({
+          id: notificationDoc.id,
+          ...notificationDoc.data(),
+        }))
+        // Guard against non-notification docs that might share this collection.
+        .filter((notif: any) => notif?.taskId && notif?.message)
+        .map((notif: any) => ({
           ...notif,
           timestamp: notif.timestamp?.toDate?.() || new Date(notif.timestamp),
-        }));
-        
-        const loadedState = {
-          userName: data.userName || '',
-          partnerName: data.partnerName || '',
-          tasks: (data.tasks || []).map(convertTimestamps),
-          notifications,
-        };
-        
-        console.log('Loaded state from Firebase:', {
-          taskCount: loadedState.tasks.length,
-          tasks: loadedState.tasks.map((t: any) => ({
-            id: t.id,
-            title: t.title,
-            deadline: t.deadline,
-            deadlineType: typeof t.deadline,
-            deadlineIsDate: t.deadline instanceof Date,
-            deadlineValid: t.deadline instanceof Date && !isNaN(t.deadline.getTime()),
-            commentCount: t.comments?.length || 0
-          }))
+        }))
+        .sort((a: any, b: any) => {
+          const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+          const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+          return bTime - aTime;
         });
-        
+
+      console.info('[Firebase Migration] loadState using new paths only', {
+        profileDocPath: `${RESOLUTIONS_COLLECTION}/${year}`,
+        tasksCollectionPath: `${RESOLUTIONS_COLLECTION}/${year}/${TASKS_SUBCOLLECTION}`,
+        notificationsCollectionPath: NOTIFICATIONS_COLLECTION,
+        year,
+        profileDocExists: yearDocSnap.exists(),
+        tasksDocCount: loadedTasks.length,
+        notificationsDocCount: loadedNotifications.length,
+      });
+
+      if (yearDocSnap.exists() || loadedTasks.length > 0 || loadedNotifications.length > 0) {
+        const yearData = yearDocSnap.data() || {};
+        const loadedState = {
+          userName: yearData.userName || '',
+          partnerName: yearData.partnerName || '',
+          tasks: loadedTasks,
+          notifications: loadedNotifications,
+        };
+
+        console.log('Loaded state from new Firebase paths:', {
+          taskCount: loadedState.tasks.length,
+          notificationCount: loadedState.notifications.length,
+        });
+
         return loadedState;
       }
+
       return null;
     } catch (error) {
       console.error('Error loading state from Firebase:', error);
@@ -200,8 +226,58 @@ export const firebaseService = {
     }
   },
 
+  async upsertTask(task: Task, year: string = DEFAULT_YEAR): Promise<void> {
+    const tasksCollectionRef = getTasksCollectionRef(year);
+    const taskDocRef = doc(tasksCollectionRef, String(task.id));
+    await setDoc(taskDocRef, convertToTimestamps(task), { merge: true });
+  },
+
+  async deleteTask(taskId: string, year: string = DEFAULT_YEAR): Promise<void> {
+    const tasksCollectionRef = getTasksCollectionRef(year);
+    await deleteDoc(doc(tasksCollectionRef, String(taskId)));
+  },
+
+  async upsertNotification(notification: Notification): Promise<void> {
+    if (!notification?.id) return;
+    const notificationsCollectionRef = getNotificationsCollectionRef();
+    await setDoc(
+      doc(notificationsCollectionRef, String(notification.id)),
+      removeUndefined({
+        ...notification,
+        timestamp:
+          notification.timestamp instanceof Date
+            ? Timestamp.fromDate(notification.timestamp)
+            : notification.timestamp,
+      }),
+      { merge: true }
+    );
+  },
+
+  async upsertNotifications(notifications: Notification[]): Promise<void> {
+    if (!notifications?.length) return;
+    const notificationsCollectionRef = getNotificationsCollectionRef();
+    const batch = writeBatch(db);
+
+    for (const notification of notifications) {
+      if (!notification?.id) continue;
+      batch.set(
+        doc(notificationsCollectionRef, String(notification.id)),
+        removeUndefined({
+          ...notification,
+          timestamp:
+            notification.timestamp instanceof Date
+              ? Timestamp.fromDate(notification.timestamp)
+              : notification.timestamp,
+        }),
+        { merge: true }
+      );
+    }
+
+    await batch.commit();
+  },
+
   // Save app state
-  async saveState(state: AppState): Promise<void> {
+  async saveState(state: AppState, year: string = DEFAULT_YEAR): Promise<void> {
     try {
       // Safety check: Don't save if state is invalid
       if (!state.userName && !state.partnerName && state.tasks.length === 0) {
@@ -209,37 +285,65 @@ export const firebaseService = {
         return;
       }
       
-      const docRef = doc(db, COLLECTION_NAME, STATE_DOC_ID);
-      
-      // Convert notification timestamps
+      const yearDocRef = doc(db, RESOLUTIONS_COLLECTION, year);
+      const tasksCollectionRef = collection(
+        db,
+        `${RESOLUTIONS_COLLECTION}/${year}/${TASKS_SUBCOLLECTION}`
+      );
+      const notificationsCollectionRef = collection(db, NOTIFICATIONS_COLLECTION);
+
+      // Convert notification timestamps for Firestore
       const notifications = (state.notifications || []).map((notif) => ({
         ...notif,
         timestamp: notif.timestamp instanceof Date 
           ? Timestamp.fromDate(notif.timestamp)
           : notif.timestamp,
       }));
-      
-      const dataToSave = {
+
+      const yearDataToSave = {
         userName: state.userName,
         partnerName: state.partnerName,
-        tasks: state.tasks.map(convertToTimestamps),
-        notifications: removeUndefined(notifications),
         updatedAt: Timestamp.now(),
       };
-      
-      console.log('Saving state to Firebase:', {
-        taskCount: dataToSave.tasks.length,
-        userName: dataToSave.userName,
-        partnerName: dataToSave.partnerName,
-        tasks: dataToSave.tasks.map((t: any) => ({
-          id: t.id,
-          title: t.title,
-          commentCount: t.comments?.length || 0
-        }))
-      });
-      
-      await setDoc(docRef, dataToSave);
-      console.log('State saved successfully');
+
+      await setDoc(yearDocRef, yearDataToSave, { merge: true });
+
+      // Sync task docs in resolutions/2026/tasks
+      const currentTaskDocsSnap = await getDocs(tasksCollectionRef);
+      const currentTaskIds = new Set(currentTaskDocsSnap.docs.map((taskDoc) => taskDoc.id));
+      const nextTaskIds = new Set(state.tasks.map((task) => String(task.id)));
+      const tasksBatch = writeBatch(db);
+
+      for (const task of state.tasks) {
+        const taskId = String(task.id);
+        const taskDocRef = doc(tasksCollectionRef, taskId);
+        tasksBatch.set(taskDocRef, convertToTimestamps(task));
+      }
+
+      for (const existingTaskId of currentTaskIds) {
+        if (!nextTaskIds.has(existingTaskId)) {
+          tasksBatch.delete(doc(tasksCollectionRef, existingTaskId));
+        }
+      }
+
+      await tasksBatch.commit();
+
+      // Upsert notification docs in root notifications collection.
+      // We intentionally avoid deleting here to prevent removing unrelated docs.
+      if (notifications.length > 0) {
+        const notificationsBatch = writeBatch(db);
+        for (const notification of notifications) {
+          if (!notification.id) continue;
+          notificationsBatch.set(
+            doc(notificationsCollectionRef, String(notification.id)),
+            removeUndefined(notification),
+            { merge: true }
+          );
+        }
+        await notificationsBatch.commit();
+      }
+
+      console.log('State saved successfully to new Firebase paths');
     } catch (error) {
       console.error('Error saving state to Firebase:', error);
       throw error;
