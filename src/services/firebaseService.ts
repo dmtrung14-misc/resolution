@@ -15,17 +15,19 @@ import {
   deleteObject 
 } from 'firebase/storage';
 import { db, storage } from '../config/firebase';
-import { AppState, Task, Notification } from '../types';
+import { AppState, Task, Notification, FirstWish } from '../types';
 
 const RESOLUTIONS_COLLECTION = 'resolutions';
 const DEFAULT_YEAR = '2026';
 const TASKS_SUBCOLLECTION = 'tasks';
 const NOTIFICATIONS_COLLECTION = 'notifications';
+const FIRST_WISHES_COLLECTION = 'firstWishes';
 
 const getTasksCollectionRef = (year: string = DEFAULT_YEAR) =>
   collection(db, `${RESOLUTIONS_COLLECTION}/${year}/${TASKS_SUBCOLLECTION}`);
 
 const getNotificationsCollectionRef = () => collection(db, NOTIFICATIONS_COLLECTION);
+const getFirstWishesCollectionRef = () => collection(db, FIRST_WISHES_COLLECTION);
 
 // Recursively convert comment timestamps
 const convertCommentTimestamps = (comment: any): any => {
@@ -274,6 +276,45 @@ export const firebaseService = {
     }
 
     await batch.commit();
+  },
+
+  async loadFirstWishes(): Promise<FirstWish[]> {
+    try {
+      const firstWishesCollectionRef = getFirstWishesCollectionRef();
+      const firstWishesSnap = await getDocs(firstWishesCollectionRef);
+
+      return firstWishesSnap.docs
+        .map((wishDoc) => ({
+          id: wishDoc.id,
+          ...wishDoc.data(),
+        }))
+        .filter((wish: any) => wish?.title)
+        .map((wish: any) => ({
+          ...wish,
+          createdAt: wish.createdAt?.toDate?.() || new Date(wish.createdAt),
+        }))
+        .sort((a: FirstWish, b: FirstWish) => b.createdAt.getTime() - a.createdAt.getTime());
+    } catch (error) {
+      console.error('Error loading first wishes from Firebase:', error);
+      return [];
+    }
+  },
+
+  async upsertFirstWish(wish: FirstWish): Promise<void> {
+    const firstWishesCollectionRef = getFirstWishesCollectionRef();
+    await setDoc(
+      doc(firstWishesCollectionRef, String(wish.id)),
+      removeUndefined({
+        ...wish,
+        createdAt: wish.createdAt instanceof Date ? Timestamp.fromDate(wish.createdAt) : wish.createdAt,
+      }),
+      { merge: true }
+    );
+  },
+
+  async deleteFirstWish(wishId: string): Promise<void> {
+    const firstWishesCollectionRef = getFirstWishesCollectionRef();
+    await deleteDoc(doc(firstWishesCollectionRef, String(wishId)));
   },
 
   // Save app state

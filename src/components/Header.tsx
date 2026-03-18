@@ -6,7 +6,7 @@ interface HeaderProps {
   completedCount: number;
   totalCount: number;
   currentUser: UserRole | null;
-  filter: 'my' | 'partner' | 'together' | null;
+  filter: 'my' | 'partner' | 'together' | 'firstWishes' | null;
   unreadNotifications: number;
   showNotifications: boolean;
   notifications: any[];

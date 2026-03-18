@@ -70,6 +70,13 @@ export interface Task {
   subtasks?: SubTask[];
 }
 
+export interface FirstWish {
+  id: string;
+  title: string;
+  completed: boolean;
+  createdAt: Date;
+}
+
 export interface UserProfile {
   username: UserRole; // 'doggo' or 'ducko'
   displayName: string;
